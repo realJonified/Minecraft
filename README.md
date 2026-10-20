@@ -22,6 +22,11 @@ python3 -m http.server
 - Blöcke abbauen und setzen (Gras, Erde, Stein, Bruchstein, Bretter, Holz, Glas, Ziegel, Sand, Laub, Schnee)
 - Spielerphysik mit Schwerkraft, Springen, Kollision, Schwimmen und Sprinten
 - Flugmodus
+- Tiere: Schweine, Kühe, Schafe und Hühner laufen in kleinen Herden herum und flüchten, wenn man sie schlägt
+- Monster in der Nacht: Zombies jagen dich (und verbrennen in der Sonne), Creeper schleichen sich an und explodieren
+- Lebensanzeige mit Herzen, Fallschaden, Regeneration, Tod und Wiederbeleben
+- Friedlicher Modus im Menü („Monster: Aus“)
+- Touch-Steuerung für Handy und Tablet (Joystick, Wischen zum Umsehen, Buttons)
 - Tag/Nacht-Zyklus mit Sonne, Mond und ziehenden Wolken
 - Ambient Occlusion für den typischen weichen Schatten-Look
 - Alle Texturen werden prozedural im Code gezeichnet (keine Bilddateien)
@@ -35,10 +40,12 @@ python3 -m http.server
 | Maus | Umsehen |
 | Leertaste | Springen / Schwimmen / Hochfliegen |
 | Shift | Sprinten / Runterfliegen |
-| Linksklick | Block abbauen (gedrückt halten für mehrere) |
+| Linksklick | Block abbauen / Tier oder Monster schlagen (gedrückt halten für mehrere) |
 | Rechtsklick | Block setzen |
 | Mittelklick | Anvisierten Block in die Hotbar übernehmen |
 | 1–9 / Mausrad | Block wechseln |
 | F | Flugmodus an/aus |
 | F3 | Debug-Infos (FPS, Position, Seed) |
 | Esc | Pause |
+
+Auf Handy und Tablet: Joystick links zum Laufen, Wischen zum Umsehen, ⛏ abbauen/schlagen, 🧱 platzieren, ⬆ springen, ⬇ runterfliegen, ✈ Flugmodus, ⏸ Pause.

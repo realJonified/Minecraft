@@ -19,10 +19,15 @@
   .slot.active { border-color: #fff; background: rgba(255,255,255,.15); }
   .slot span { position: absolute; top: 1px; left: 4px; font-size: 11px; color: rgba(255,255,255,.7); }
   .slot canvas { image-rendering: pixelated; }
-  #blockname { position: fixed; bottom: 88px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 18px; text-shadow: 2px 2px 0 #000; transition: opacity .4s; pointer-events: none; }
+  #blockname { position: fixed; bottom: 112px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 18px; text-shadow: 2px 2px 0 #000; transition: opacity .4s; pointer-events: none; }
 
   #debug { position: fixed; top: 8px; left: 8px; color: #fff; font: 13px/1.4 monospace; text-shadow: 1px 1px 0 #000; white-space: pre; pointer-events: none; display: none; }
   #flyhint { position: fixed; top: 8px; right: 12px; color: #fff; font-size: 14px; text-shadow: 1px 1px 0 #000; display: none; }
+  #health { position: fixed; bottom: 84px; left: 50%; transform: translateX(-50%); display: flex; gap: 2px; pointer-events: none; }
+  #health img { width: 18px; height: 16px; image-rendering: pixelated; }
+  #hurt { position: fixed; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, rgba(200,0,0,0) 35%, rgba(200,0,0,.6)); }
+  #death { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(110,0,0,.55); }
+  #death h1 { color: #ff5a5a; text-shadow: 3px 3px 0 #3a0000; }
   #underwater { position: fixed; inset: 0; background: rgba(20, 60, 160, .35); pointer-events: none; display: none; }
 
   #overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.55); }
@@ -44,7 +49,8 @@
   body.touch .slot { width: min(46px, calc((100vw - 150px) / 9)); height: min(46px, calc((100vw - 150px) / 9)); border-width: 2px; }
   body.touch .slot canvas { width: 82% !important; height: 82% !important; }
   body.touch .slot span { display: none; }
-  body.touch #blockname { top: 70px; bottom: auto; }
+  body.touch #blockname { top: calc(max(8px, env(safe-area-inset-top)) + min(46px, calc((100vw - 150px) / 9)) + 44px); bottom: auto; }
+  body.touch #health { top: calc(max(8px, env(safe-area-inset-top)) + min(46px, calc((100vw - 150px) / 9)) + 18px); bottom: auto; }
   body.touch #flyhint { display: none !important; }
   #joy { position: absolute; left: max(24px, env(safe-area-inset-left)); bottom: max(24px, env(safe-area-inset-bottom)); width: 140px; height: 140px; border-radius: 50%; background: rgba(255,255,255,.12); border: 2px solid rgba(255,255,255,.35); pointer-events: auto; touch-action: none; }
   #knob { position: absolute; left: 50%; top: 50%; width: 60px; height: 60px; margin: -30px 0 0 -30px; border-radius: 50%; background: rgba(255,255,255,.5); pointer-events: none; }
@@ -66,6 +72,8 @@
 <div id="underwater"></div>
 <div id="crosshair"></div>
 <div id="blockname"></div>
+<div id="health"></div>
+<div id="hurt"></div>
 <div id="hotbar"></div>
 <div id="debug"></div>
 <div id="flyhint">✈ Flugmodus</div>
@@ -74,13 +82,14 @@
     <h1>BlockWelt</h1>
     <p class="sub">Baue, grabe und erkunde eine unendliche Welt</p>
     <button id="play">Spielen</button>
+    <button id="peaceful">Monster: An</button>
     <button id="newworld">Neue Welt erstellen</button>
     <div class="controls">
       <b>W A S D</b><span>Laufen</span>
       <b>Maus</b><span>Umsehen</span>
       <b>Leertaste</b><span>Springen / Schwimmen / Hochfliegen</span>
       <b>Shift</b><span>Sprinten / Runterfliegen</span>
-      <b>Linksklick</b><span>Block abbauen</span>
+      <b>Linksklick</b><span>Block abbauen / Mob schlagen</span>
       <b>Rechtsklick</b><span>Block setzen</span>
       <b>Mittelklick</b><span>Block auswählen</span>
       <b>1–9 / Mausrad</b><span>Block wechseln</span>
@@ -91,7 +100,7 @@
     <div class="touch-help">
       🕹 Joystick links: laufen (ganz nach vorne = sprinten)<br>
       👆 Wischen auf dem Bildschirm: umsehen<br>
-      ⛏ abbauen · 🧱 platzieren (gedrückt halten für mehrere)<br>
+      ⛏ abbauen oder Tiere &amp; Monster schlagen · 🧱 platzieren<br>
       ⬆ springen / schwimmen / hochfliegen · ⬇ runterfliegen<br>
       ✈ Flugmodus · Block oben in der Leiste antippen
     </div>
@@ -105,6 +114,13 @@
   <button class="tbtn small" id="t-down">⬇</button>
   <button class="tbtn small" id="t-fly">✈</button>
   <button class="tbtn small" id="t-pause">⏸</button>
+</div>
+<div id="death">
+  <div class="panel">
+    <h1>Du bist gestorben!</h1>
+    <p class="sub">Deine Welt bleibt erhalten.</p>
+    <button id="respawn">Wiederbeleben</button>
+  </div>
 </div>
 <div id="loading">Welt wird generiert…</div>
 
@@ -693,6 +709,8 @@ function saveGame() {
       mods: world.serializeMods(),
       player: { x: player.pos[0], y: player.pos[1], z: player.pos[2], yaw: player.yaw, pitch: player.pitch, flying: player.flying },
       time: dayTime,
+      hp: player.hp,
+      peaceful,
       slot: selectedSlot,
       hotbar,
     }));
@@ -798,6 +816,11 @@ const player = {
   onGround: false,
   flying: false,
   inWater: false,
+  hp: 20,
+  dead: false,
+  hurtCd: 0,
+  regenTimer: 0,
+  fallPeak: 0,
 };
 
 function findSpawn() {
@@ -820,25 +843,7 @@ function collides(pos) {
 }
 
 // Bewegt den Spieler entlang einer Achse und stoppt an der nächsten Blockkante
-function moveAxis(axis, delta) {
-  if (delta === 0) return false;
-  const p = player.pos;
-  p[axis] += delta;
-  const x0 = Math.floor(p[0] - HALF_W), x1 = Math.floor(p[0] + HALF_W);
-  const y0 = Math.floor(p[1]), y1 = Math.floor(p[1] + PLAYER_H);
-  const z0 = Math.floor(p[2] - HALF_W), z1 = Math.floor(p[2] + HALF_W);
-  let hit = false, best = delta > 0 ? Infinity : -Infinity;
-  for (let y = y0; y <= y1; y++) for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) {
-    if (!SOLID[world.getBlock(x, y, z)]) continue;
-    hit = true;
-    const c = axis === 0 ? x : axis === 1 ? y : z;
-    best = delta > 0 ? Math.min(best, c) : Math.max(best, c);
-  }
-  if (!hit) return false;
-  const lo = axis === 1 ? 0 : HALF_W, hi = axis === 1 ? PLAYER_H : HALF_W;
-  p[axis] = delta > 0 ? best - hi - 1e-4 : best + 1 + lo + 1e-4;
-  return true;
-}
+const moveAxis = (axis, delta) => moveBox(player.pos, HALF_W, PLAYER_H, axis, delta);
 
 const keys = {};
 const touchKeys = { jump: false, down: false };
@@ -846,6 +851,11 @@ const joy = { x: 0, y: 0, id: null };
 
 function updatePlayer(dt) {
   const v = player.vel, p = player.pos;
+  // nicht bewegen, solange der eigene Chunk noch nicht fertig ist
+  if (!world.getChunk(Math.floor(p[0]) >> 4, Math.floor(p[2]) >> 4)?.meshed) return;
+  player.hurtCd = Math.max(0, player.hurtCd - dt);
+  player.regenTimer += dt;
+  if (player.hp < MAX_HP && player.regenTimer > 4) { player.hp++; player.regenTimer -= 1.5; renderHealth(); }
   const feet = world.getBlock(Math.floor(p[0]), Math.floor(p[1] + 0.4), Math.floor(p[2]));
   player.inWater = feet === B.WATER;
 
@@ -872,19 +882,24 @@ function updatePlayer(dt) {
   v[0] += (wx * speed - v[0]) * blend;
   v[2] += (wz * speed - v[2]) * blend;
 
+  // vyMove = mittlere Fallgeschwindigkeit im Frame, damit Sprunghöhe nicht von den FPS abhängt
+  let vyMove;
   if (player.flying) {
     let vy = 0;
     if (jump) vy += FLY * 0.8;
     if (down) vy -= FLY * 0.8;
     v[1] += (vy - v[1]) * blend;
+    vyMove = v[1];
   } else if (player.inWater) {
     v[1] -= 9 * dt;
     if (jump) v[1] = Math.min(v[1] + 30 * dt, 3.8);
     v[1] = Math.max(v[1], -3.5);
+    vyMove = v[1];
   } else {
-    v[1] -= GRAVITY * dt;
     if (jump && player.onGround) v[1] = JUMP;
-    v[1] = Math.max(v[1], -55);
+    const vy0 = v[1];
+    v[1] = Math.max(v[1] - GRAVITY * dt, -55);
+    vyMove = (vy0 + v[1]) / 2;
   }
 
   // in kleinen Schritten bewegen, damit man nicht durch Blöcke tunnelt
@@ -892,12 +907,20 @@ function updatePlayer(dt) {
   const sdt = dt / steps;
   player.onGround = false;
   for (let s = 0; s < steps; s++) {
-    if (moveAxis(1, v[1] * sdt)) {
-      if (v[1] < 0) player.onGround = true;
-      v[1] = 0;
+    if (moveAxis(1, vyMove * sdt)) {
+      if (vyMove < 0) player.onGround = true;
+      v[1] = vyMove = 0;
     }
     if (moveAxis(0, v[0] * sdt)) v[0] = 0;
     if (moveAxis(2, v[2] * sdt)) v[2] = 0;
+  }
+  // Fallschaden
+  if (player.flying || player.inWater) player.fallPeak = p[1];
+  else if (!player.onGround) player.fallPeak = Math.max(player.fallPeak, p[1]);
+  else {
+    const fall = player.fallPeak - p[1];
+    if (fall > 3.5) { player.hurtCd = 0; damagePlayer(Math.floor(fall - 3), p[0], p[2], 0); }
+    player.fallPeak = p[1];
   }
   // Am Wasserrand automatisch herausklettern
   if (player.inWater && fz < 0 && jump) {
@@ -930,7 +953,7 @@ function raycast(origin, dir, maxDist) {
   let nx = 0, ny = 0, nz = 0, t = 0;
   while (t <= maxDist) {
     const id = world.getBlock(x, y, z);
-    if (id !== B.AIR && id !== B.WATER) return { x, y, z, nx, ny, nz, id };
+    if (id !== B.AIR && id !== B.WATER) return { x, y, z, nx, ny, nz, id, t };
     if (tmx < tmy && tmx < tmz) { x += sx; t = tmx; tmx += tdx; nx = -sx; ny = 0; nz = 0; }
     else if (tmy < tmz) { y += sy; t = tmy; tmy += tdy; nx = 0; ny = -sy; nz = 0; }
     else { z += sz; t = tmz; tmz += tdz; nx = 0; ny = 0; nz = -sz; }
@@ -939,11 +962,563 @@ function raycast(origin, dir, maxDist) {
 }
 
 // ============================================================
+//  Mobs & Tiere
+// ============================================================
+const PX = 1 / 16;                // Modelle werden in "Pixeln" (1/16 Block) gebaut
+let peaceful = !!saved?.peaceful; // friedlich = keine Monster
+let daylight = 1, lightLin = 1;   // werden in updateSky gesetzt
+
+const texCache = new Map();
+function skinTex(key, base, vary, draw) {
+  if (texCache.has(key)) return texCache.get(key);
+  const c = document.createElement('canvas'); c.width = c.height = 8;
+  const ctx = c.getContext('2d');
+  const rnd = mulberry32([...key].reduce((a, ch) => a * 31 + ch.charCodeAt(0), 7));
+  for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) {
+    const k = 1 + (rnd() - 0.5) * vary;
+    ctx.fillStyle = `rgb(${base[0] * k | 0},${base[1] * k | 0},${base[2] * k | 0})`;
+    ctx.fillRect(x, y, 1, 1);
+  }
+  if (draw) draw(ctx, rnd);
+  const t = new THREE.CanvasTexture(c);
+  t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter;
+  t.generateMipmaps = false; t.colorSpace = THREE.SRGBColorSpace;
+  texCache.set(key, t);
+  return t;
+}
+const px = (ctx, color, x, y, w = 1, h = 1) => { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); };
+const eyes = (ctx, y, white = '#fff', pupil = '#111') => {
+  px(ctx, white, 1, y); px(ctx, pupil, 2, y); px(ctx, pupil, 5, y); px(ctx, white, 6, y);
+};
+
+// Würfel mit fester Flächen-Schattierung (wie bei den Blöcken)
+const geoCache = new Map();
+function boxGeo(w, h, d) {
+  const key = w + ',' + h + ',' + d;
+  if (geoCache.has(key)) return geoCache.get(key);
+  const g = new THREE.BoxGeometry(w * PX, h * PX, d * PX);
+  const n = g.attributes.normal, col = [];
+  for (let i = 0; i < n.count; i++) {
+    const s = n.getY(i) > 0.5 ? 1 : n.getY(i) < -0.5 ? 0.5 : Math.abs(n.getX(i)) > 0.5 ? 0.7 : 0.85;
+    const l = Math.pow(s, 2.2);
+    col.push(l, l, l);
+  }
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  geoCache.set(key, g);
+  return g;
+}
+
+// Körperteil: Gruppe am Drehpunkt (pivot), Würfel um offset verschoben. Flächen: +x,-x,+y,-y,+z(vorne),-z
+function addPart(mob, parent, size, pivot, offset, texs) {
+  const list = Array.isArray(texs) ? texs : [texs, texs, texs, texs, texs, texs];
+  const mats = list.map(t => {
+    if (!mob.matCache.has(t)) {
+      const m = new THREE.MeshBasicMaterial({ map: t, vertexColors: true });
+      mob.matCache.set(t, m);
+      mob.mats.push(m);
+    }
+    return mob.matCache.get(t);
+  });
+  const mesh = new THREE.Mesh(boxGeo(...size), mats);
+  mesh.position.set(offset[0] * PX, offset[1] * PX, offset[2] * PX);
+  const g = new THREE.Group();
+  g.position.set(pivot[0] * PX, pivot[1] * PX, pivot[2] * PX);
+  g.add(mesh);
+  parent.add(g);
+  return g;
+}
+const withFront = (side, front) => [side, side, side, side, front, side];
+
+const MOB_TYPES = {
+  pig: {
+    name: 'Schwein', hp: 10, speed: 1.3, hw: 0.45, h: 0.9,
+    build(m, r) {
+      const skin = skinTex('pig', [238, 158, 158], 0.12);
+      const face = skinTex('pig-face', [238, 158, 158], 0.12, ctx => eyes(ctx, 3));
+      const snout = skinTex('pig-snout', [220, 130, 135], 0.08, ctx => { px(ctx, '#7a3f3f', 1, 3, 2, 2); px(ctx, '#7a3f3f', 5, 3, 2, 2); });
+      addPart(m, r, [10, 8, 16], [0, 10, 0], [0, 0, 0], skin);
+      const head = addPart(m, r, [8, 8, 8], [0, 12, 8], [0, 0, 4], withFront(skin, face));
+      addPart(m, head, [4, 3, 1], [0, -1.5, 8.5], [0, 0, 0], withFront(skin, snout));
+      for (const [x, z] of [[-3, 5], [3, 5], [-3, -5], [3, -5]]) m.legs.push(addPart(m, r, [4, 6, 4], [x, 6, z], [0, -3, 0], skin));
+    },
+  },
+  cow: {
+    name: 'Kuh', hp: 10, speed: 1.1, hw: 0.45, h: 1.4,
+    build(m, r) {
+      const spots = (ctx, rnd) => { for (let i = 0; i < 4; i++) px(ctx, '#eee', rnd() * 7 | 0, rnd() * 7 | 0, 2 + (rnd() * 2 | 0), 2); };
+      const skin = skinTex('cow', [82, 56, 38], 0.15, spots);
+      const face = skinTex('cow-face', [82, 56, 38], 0.15, ctx => { px(ctx, '#eee', 2, 0, 4, 3); eyes(ctx, 3); px(ctx, '#d8a0a0', 2, 5, 4, 3); px(ctx, '#553', 2, 6); px(ctx, '#553', 5, 6); });
+      const horn = skinTex('cow-horn', [220, 215, 200], 0.1);
+      addPart(m, r, [12, 10, 18], [0, 17, 0], [0, 0, 0], skin);
+      const head = addPart(m, r, [8, 8, 6], [0, 20, 9], [0, 0, 3], withFront(skin, face));
+      addPart(m, head, [1, 3, 1], [-4.5, 4.5, 1], [0, 0, 0], horn);
+      addPart(m, head, [1, 3, 1], [4.5, 4.5, 1], [0, 0, 0], horn);
+      for (const [x, z] of [[-4, 7], [4, 7], [-4, -7], [4, -7]]) m.legs.push(addPart(m, r, [4, 12, 4], [x, 12, z], [0, -6, 0], skin));
+    },
+  },
+  sheep: {
+    name: 'Schaf', hp: 8, speed: 1.1, hw: 0.45, h: 1.3,
+    build(m, r) {
+      const wool = skinTex('sheep-wool', [236, 236, 236], 0.1);
+      const skin = skinTex('sheep-skin', [214, 186, 166], 0.08);
+      const face = skinTex('sheep-face', [214, 186, 166], 0.08, ctx => { px(ctx, '#eee', 0, 0, 8, 2); eyes(ctx, 3); px(ctx, '#c79a9a', 3, 5, 2, 1); });
+      addPart(m, r, [11, 10, 16], [0, 14, 0], [0, 0, 0], wool);
+      const head = addPart(m, r, [6, 6, 7], [0, 17, 7], [0, 0, 3.5], withFront(wool, face));
+      addPart(m, head, [6.5, 2, 6], [0, 3.5, 3], [0, 0, 0], wool);
+      for (const [x, z] of [[-3, 5], [3, 5], [-3, -5], [3, -5]]) m.legs.push(addPart(m, r, [4, 9, 4], [x, 9, z], [0, -4.5, 0], skin));
+    },
+  },
+  chicken: {
+    name: 'Huhn', hp: 4, speed: 1.0, hw: 0.2, h: 0.7,
+    build(m, r) {
+      const white = skinTex('chicken', [245, 245, 245], 0.06);
+      const face = skinTex('chicken-face', [245, 245, 245], 0.06, ctx => { px(ctx, '#111', 1, 3); px(ctx, '#111', 6, 3); });
+      const beak = skinTex('chicken-beak', [240, 170, 40], 0.1);
+      const red = skinTex('chicken-red', [210, 30, 30], 0.1);
+      const leg = skinTex('chicken-leg', [230, 170, 40], 0.1);
+      addPart(m, r, [6, 6, 8], [0, 8, 0], [0, 0, 0], white);
+      const head = addPart(m, r, [4, 6, 3], [0, 11, 3], [0, 1, 1.5], withFront(white, face));
+      addPart(m, head, [4, 2, 2], [0, 1.5, 4], [0, 0, 0], beak);
+      addPart(m, head, [2, 2, 2], [0, -0.5, 3.5], [0, 0, 0], red);
+      m.wings.push(addPart(m, r, [1, 4, 6], [-3.5, 10, 0], [0, -2, 0], white));
+      m.wings.push(addPart(m, r, [1, 4, 6], [3.5, 10, 0], [0, -2, 0], white));
+      for (const x of [-1.5, 1.5]) m.legs.push(addPart(m, r, [1, 5, 1], [x, 5, 0], [0, -2.5, 0], leg));
+    },
+  },
+  zombie: {
+    name: 'Zombie', hp: 20, speed: 2.2, hw: 0.3, h: 1.95, hostile: true,
+    build(m, r) {
+      const skin = skinTex('zombie', [92, 140, 76], 0.15);
+      const face = skinTex('zombie-face', [92, 140, 76], 0.15, ctx => { px(ctx, '#3d5a32', 0, 0, 8, 2); px(ctx, '#1d2a18', 1, 3, 2, 1); px(ctx, '#1d2a18', 5, 3, 2, 1); px(ctx, '#4a6b3c', 3, 5, 2, 1); });
+      const shirt = skinTex('zombie-shirt', [0, 150, 160], 0.15);
+      const pants = skinTex('zombie-pants', [62, 70, 160], 0.12);
+      for (const x of [-2, 2]) m.legs.push(addPart(m, r, [4, 12, 4], [x, 12, 0], [0, -6, 0], pants));
+      addPart(m, r, [8, 12, 4], [0, 18, 0], [0, 0, 0], shirt);
+      for (const x of [-6, 6]) {
+        const arm = addPart(m, r, [4, 12, 4], [x, 22, 0], [0, -6, 0], skin);
+        arm.rotation.x = -Math.PI / 2;
+        m.arms.push(arm);
+      }
+      addPart(m, r, [8, 8, 8], [0, 24, 0], [0, 4, 0], withFront(skin, face));
+    },
+  },
+  creeper: {
+    name: 'Creeper', hp: 20, speed: 2.0, hw: 0.3, h: 1.7, hostile: true,
+    build(m, r) {
+      const skin = skinTex('creeper', [92, 176, 76], 0.45);
+      const face = skinTex('creeper-face', [92, 176, 76], 0.45, ctx => {
+        px(ctx, '#111', 1, 2, 2, 2); px(ctx, '#111', 5, 2, 2, 2);
+        px(ctx, '#111', 3, 4, 2, 3); px(ctx, '#111', 2, 5, 1, 2); px(ctx, '#111', 5, 5, 1, 2);
+      });
+      for (const [x, z] of [[-2, 4], [2, 4], [-2, -4], [2, -4]]) m.legs.push(addPart(m, r, [4, 6, 4], [x, 6, z], [0, -3, 0], skin));
+      addPart(m, r, [8, 12, 4], [0, 12, 0], [0, 0, 0], skin);
+      addPart(m, r, [8, 8, 8], [0, 18, 0], [0, 4, 0], withFront(skin, face));
+    },
+  },
+};
+const ANIMALS = ['pig', 'cow', 'sheep', 'chicken'];
+const MAX_ANIMALS = 10, MAX_HOSTILE = 8;
+
+// Bewegt eine Box (Füße bei pos, halbe Breite hw, Höhe h) entlang einer Achse mit Blockkollision
+function moveBox(p, hw, h, axis, delta) {
+  if (delta === 0) return false;
+  p[axis] += delta;
+  const x0 = Math.floor(p[0] - hw), x1 = Math.floor(p[0] + hw);
+  const y0 = Math.floor(p[1]), y1 = Math.floor(p[1] + h);
+  const z0 = Math.floor(p[2] - hw), z1 = Math.floor(p[2] + hw);
+  let hit = false, best = delta > 0 ? Infinity : -Infinity;
+  for (let y = y0; y <= y1; y++) for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) {
+    if (!SOLID[world.getBlock(x, y, z)]) continue;
+    hit = true;
+    const c = axis === 0 ? x : axis === 1 ? y : z;
+    best = delta > 0 ? Math.min(best, c) : Math.max(best, c);
+  }
+  if (!hit) return false;
+  const lo = axis === 1 ? 0 : hw, hi = axis === 1 ? h : hw;
+  p[axis] = delta > 0 ? best - hi - 1e-4 : best + 1 + lo + 1e-4;
+  return true;
+}
+
+function skyExposed(x, y, z) {
+  for (let yy = Math.floor(y); yy < HEIGHT; yy++) if (world.getBlock(x, yy, z) !== B.AIR) return false;
+  return true;
+}
+
+const mobs = [];
+
+class Mob {
+  constructor(type, x, y, z) {
+    this.type = type;
+    this.def = MOB_TYPES[type];
+    this.pos = [x, y, z];
+    this.vel = [0, 0, 0];
+    this.yaw = Math.random() * Math.PI * 2;
+    this.hp = this.def.hp;
+    this.onGround = false;
+    this.inWater = false;
+    this.mats = []; this.matCache = new Map();
+    this.legs = []; this.arms = []; this.wings = [];
+    this.root = new THREE.Group();
+    this.body = new THREE.Group();
+    this.root.add(this.body);
+    this.def.build(this, this.body);
+    scene.add(this.root);
+    this.moveDir = [0, 0]; this.moveSpeed = 0;
+    this.wanderTimer = 0; this.panic = 0;
+    this.hurtTimer = 0; this.attackCd = 0; this.burnTimer = 0; this.sunCheck = Math.random();
+    this.fuse = 0; this.walkPhase = 0;
+    this.deadTime = -1; this.removed = false;
+  }
+
+  get alive() { return this.deadTime < 0 && !this.removed; }
+
+  hurt(amount, fromX, fromZ, knock = 7) {
+    if (!this.alive || this.hurtTimer > 0) return false;
+    this.hp -= amount;
+    this.hurtTimer = 0.35;
+    const dx = this.pos[0] - fromX, dz = this.pos[2] - fromZ, l = Math.hypot(dx, dz) || 1;
+    if (knock) {
+      this.vel[0] = dx / l * knock; this.vel[2] = dz / l * knock; this.vel[1] = 5.5;
+      this.onGround = false;
+    }
+    if (!this.def.hostile) { this.panic = 5; this.moveDir = [dx / l, dz / l]; }
+    if (this.hp <= 0) this.deadTime = 0;
+    return true;
+  }
+
+  remove() {
+    if (this.removed) return;
+    this.removed = true;
+    scene.remove(this.root);
+    for (const m of this.mats) m.dispose();
+  }
+
+  setTint(r, g, b) {
+    for (const m of this.mats) m.color.setRGB(r * lightLin, g * lightLin, b * lightLin);
+  }
+
+  update(dt) {
+    const d = this.def, p = this.pos, v = this.vel;
+    this.root.position.set(p[0], p[1], p[2]);
+
+    if (this.deadTime >= 0) {
+      this.deadTime += dt;
+      this.body.rotation.z = Math.min(1, this.deadTime * 4) * Math.PI / 2;
+      this.setTint(1, 0.4, 0.4);
+      if (this.deadTime > 0.9) this.remove();
+      return;
+    }
+    // Chunk entladen -> verschwinden
+    const chunk = world.getChunk(Math.floor(p[0]) >> 4, Math.floor(p[2]) >> 4);
+    if (!chunk || !chunk.meshed || p[1] < -10) { this.remove(); return; }
+
+    this.hurtTimer = Math.max(0, this.hurtTimer - dt);
+    this.attackCd = Math.max(0, this.attackCd - dt);
+    this.burnTimer = Math.max(0, this.burnTimer - dt);
+    this.inWater = world.getBlock(Math.floor(p[0]), Math.floor(p[1] + 0.3), Math.floor(p[2])) === B.WATER;
+
+    // ---- KI ----
+    const dx = player.pos[0] - p[0], dy = player.pos[1] - p[1], dz = player.pos[2] - p[2];
+    const hd = Math.hypot(dx, dz) || 1, dist = Math.hypot(hd, dy);
+    let speed = 0;
+    const chasing = d.hostile && !player.dead && dist < 32;
+    if (chasing) {
+      this.moveDir = [dx / hd, dz / hd];
+      speed = d.speed;
+      if (this.type === 'zombie') {
+        if (hd < 0.9 + d.hw && Math.abs(dy) < 1.6 && this.attackCd <= 0) {
+          damagePlayer(3, p[0], p[2]);
+          this.attackCd = 1;
+        }
+        if (hd < 0.7) speed = 0;
+      } else if (this.type === 'creeper') {
+        if (dist < 3) { this.fuse += dt; speed = 0; }
+        else this.fuse = Math.max(0, this.fuse - dt * (dist > 7 ? 2 : 1));
+        if (this.fuse >= 1.5) { explode(p[0], p[1] + 0.8, p[2]); this.remove(); return; }
+      }
+    } else {
+      this.fuse = Math.max(0, this.fuse - dt);
+      if (this.panic > 0) {
+        this.panic -= dt;
+        speed = d.speed * 2.2;
+        if (Math.random() < dt * 1.2) {
+          const a = Math.atan2(this.moveDir[0], this.moveDir[1]) + (Math.random() - 0.5) * 1.5;
+          this.moveDir = [Math.sin(a), Math.cos(a)];
+        }
+      } else {
+        this.wanderTimer -= dt;
+        if (this.wanderTimer <= 0) {
+          this.wanderTimer = 2 + Math.random() * 5;
+          if (Math.random() < 0.45) this.moveSpeed = 0;
+          else {
+            const a = Math.random() * Math.PI * 2;
+            this.moveDir = [Math.sin(a), Math.cos(a)];
+            this.moveSpeed = d.speed;
+          }
+        }
+        speed = this.moveSpeed;
+      }
+      // Tiere laufen nicht von Klippen
+      if (speed > 0 && !this.inWater && this.onGround) {
+        const ax = Math.floor(p[0] + this.moveDir[0] * 0.9), az = Math.floor(p[2] + this.moveDir[1] * 0.9);
+        const fy = Math.floor(p[1]);
+        let safe = SOLID[world.getBlock(ax, fy, az)] === 1;
+        for (let k = 1; k <= 3 && !safe; k++) {
+          const id = world.getBlock(ax, fy - k, az);
+          if (SOLID[id] || id === B.WATER) safe = true;
+        }
+        if (!safe) { this.moveDir = [-this.moveDir[0], -this.moveDir[1]]; this.wanderTimer = 1 + Math.random() * 2; }
+      }
+    }
+
+    // Zombies verbrennen in der Sonne
+    if (this.type === 'zombie') {
+      this.sunCheck -= dt;
+      if (this.sunCheck <= 0) {
+        this.sunCheck = 1;
+        if (daylight > 0.5 && !this.inWater && skyExposed(Math.floor(p[0]), p[1] + d.h, Math.floor(p[2]))) {
+          this.burnTimer = 1.2;
+          this.hurt(2, p[0], p[2], 0);
+        }
+      }
+    }
+
+    // ---- Physik ----
+    if (this.hurtTimer <= 0) {
+      const blend = 1 - Math.exp(-(this.onGround || this.inWater ? 12 : 3) * dt);
+      const s = this.inWater ? speed * 0.6 : speed;
+      v[0] += (this.moveDir[0] * s - v[0]) * blend;
+      v[2] += (this.moveDir[1] * s - v[2]) * blend;
+    }
+    let vyMove;
+    if (this.inWater) { v[1] += (1.6 - v[1]) * Math.min(1, dt * 4); vyMove = v[1]; }
+    else { const vy0 = v[1]; v[1] = Math.max(v[1] - GRAVITY * dt, -50); vyMove = (vy0 + v[1]) / 2; }
+
+    const steps = Math.max(1, Math.ceil(Math.max(Math.abs(v[0]), Math.abs(v[1]), Math.abs(v[2])) * dt / 0.4));
+    const sdt = dt / steps;
+    let blocked = false;
+    this.onGround = false;
+    for (let s = 0; s < steps; s++) {
+      if (moveBox(p, d.hw, d.h, 1, vyMove * sdt)) { if (vyMove < 0) this.onGround = true; v[1] = vyMove = 0; }
+      if (moveBox(p, d.hw, d.h, 0, v[0] * sdt)) { v[0] = 0; blocked = true; }
+      if (moveBox(p, d.hw, d.h, 2, v[2] * sdt)) { v[2] = 0; blocked = true; }
+    }
+    if (blocked && speed > 0 && (this.onGround || this.inWater)) v[1] = this.inWater ? 5 : JUMP;
+
+    // ---- Animation ----
+    const hs = Math.hypot(v[0], v[2]);
+    if (hs > 0.3) {
+      const target = Math.atan2(v[0], v[2]);
+      let diff = target - this.yaw;
+      diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+      this.yaw += diff * Math.min(1, dt * 8);
+    } else if (chasing) {
+      this.yaw = Math.atan2(dx, dz);
+    }
+    this.walkPhase += hs * dt * 5;
+    const swing = Math.sin(this.walkPhase) * Math.min(1, hs / d.speed) * 0.7;
+    this.legs.forEach((leg, i) => {
+      const sign = (this.legs.length === 4 ? (i === 0 || i === 3) : i === 0) ? 1 : -1;
+      leg.rotation.x = swing * sign;
+    });
+    this.arms.forEach((arm, i) => { arm.rotation.x = -Math.PI / 2 + Math.sin(this.walkPhase * 0.5 + i) * 0.08; });
+    const flap = this.onGround ? 0 : Math.sin(performance.now() * 0.03) * 0.7 + 0.7;
+    this.wings.forEach((w, i) => { w.rotation.z = flap * (i === 0 ? -1 : 1); });
+    this.root.position.set(p[0], p[1], p[2]);
+    this.root.rotation.y = this.yaw;
+    this.body.scale.setScalar(1 + Math.min(1, this.fuse / 1.5) * 0.18);
+
+    // ---- Farbe (Licht, Treffer, Zündung) ----
+    let r = 1, g = 1, b = 1;
+    if (this.hurtTimer > 0) { g = 0.45; b = 0.45; }
+    else if (this.burnTimer > 0) { g = 0.7; b = 0.45; }
+    if (this.fuse > 0 && Math.sin(this.fuse * (8 + this.fuse * 14)) > 0) { r = g = b = 3; }
+    this.setTint(r, g, b);
+  }
+}
+
+function surfaceAt(x, z) {
+  for (let y = HEIGHT - 1; y > 0; y--) {
+    const id = world.getBlock(x, y, z);
+    if (id !== B.AIR) return { y, id };
+  }
+  return null;
+}
+
+let spawnTimer = 0;
+function trySpawn(hostile) {
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const a = Math.random() * Math.PI * 2;
+    const r = hostile ? 24 + Math.random() * 16 : 18 + Math.random() * 26;
+    const x = Math.floor(player.pos[0] + Math.cos(a) * r), z = Math.floor(player.pos[2] + Math.sin(a) * r);
+    if (!world.getChunk(x >> 4, z >> 4)?.meshed) continue;
+    const s = surfaceAt(x, z);
+    if (!s || (hostile ? !SOLID[s.id] || s.id === B.LEAVES : s.id !== B.GRASS)) continue;
+    if (world.getBlock(x, s.y + 2, z) !== B.AIR) continue;
+    if (hostile) {
+      mobs.push(new Mob(Math.random() < 0.6 ? 'zombie' : 'creeper', x + 0.5, s.y + 1, z + 0.5));
+    } else {
+      // Tiere kommen in kleinen Herden
+      const type = ANIMALS[Math.floor(Math.random() * ANIMALS.length)];
+      const n = 2 + Math.floor(Math.random() * 2);
+      for (let i = 0; i < n; i++) {
+        const gx = x + Math.floor(Math.random() * 5) - 2, gz = z + Math.floor(Math.random() * 5) - 2;
+        if (!world.getChunk(gx >> 4, gz >> 4)?.meshed) continue;
+        const gs = surfaceAt(gx, gz);
+        if (gs && gs.id === B.GRASS && world.getBlock(gx, gs.y + 2, gz) === B.AIR) mobs.push(new Mob(type, gx + 0.5, gs.y + 1, gz + 0.5));
+      }
+    }
+    return;
+  }
+}
+
+function updateMobs(dt) {
+  spawnTimer -= dt;
+  if (spawnTimer <= 0) {
+    spawnTimer = 0.5;
+    let animals = 0, hostile = 0;
+    for (const m of mobs) m.def.hostile ? hostile++ : animals++;
+    if (animals < MAX_ANIMALS) trySpawn(false);
+    if (!peaceful && daylight < 0.35 && hostile < MAX_HOSTILE) trySpawn(true);
+  }
+  for (const m of mobs) {
+    if (m.removed) continue;
+    // zu weit weg -> verschwinden; Creeper verschwinden tagsüber langsam
+    const dist = Math.hypot(m.pos[0] - player.pos[0], m.pos[2] - player.pos[2]);
+    if (dist > 80 || (m.type === 'creeper' && daylight > 0.8 && dist > 20 && Math.random() < dt * 0.05)) { m.remove(); continue; }
+    m.update(dt);
+  }
+  for (let i = mobs.length - 1; i >= 0; i--) if (mobs[i].removed) mobs.splice(i, 1);
+}
+
+// Explosion (Creeper)
+const effects = [];
+const boomGeo = new THREE.SphereGeometry(1, 12, 8);
+function explode(x, y, z) {
+  const R = 3;
+  const bx = Math.floor(x), by = Math.floor(y), bz = Math.floor(z);
+  for (let dy = -R; dy <= R; dy++) for (let dz = -R; dz <= R; dz++) for (let dx = -R; dx <= R; dx++) {
+    if (Math.hypot(dx, dy, dz) > R - 0.3 + Math.random() * 0.8) continue;
+    const id = world.getBlock(bx + dx, by + dy, bz + dz);
+    if (id !== B.AIR && id !== B.BEDROCK && id !== B.WATER) world.setBlock(bx + dx, by + dy, bz + dz, B.AIR);
+  }
+  for (let cx = (bx - R - 1) >> 4; cx <= (bx + R + 1) >> 4; cx++)
+    for (let cz = (bz - R - 1) >> 4; cz <= (bz + R + 1) >> 4; cz++)
+      if (world.getChunk(cx, cz)?.meshed) meshChunk(cx, cz);
+  scheduleSave();
+
+  const pd = Math.hypot(player.pos[0] - x, player.pos[1] + 0.9 - y, player.pos[2] - z);
+  if (pd < 6) damagePlayer(Math.round((1 - pd / 6) * 18), x, z, 12);
+  for (const m of mobs) {
+    const md = Math.hypot(m.pos[0] - x, m.pos[1] - y, m.pos[2] - z);
+    if (md < 6) m.hurt(Math.round((1 - md / 6) * 18), x, z, 10);
+  }
+  const mesh = new THREE.Mesh(boomGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.85, depthWrite: false }));
+  mesh.position.set(x, y, z);
+  scene.add(mesh);
+  effects.push({ mesh, t: 0 });
+}
+function updateEffects(dt) {
+  for (let i = effects.length - 1; i >= 0; i--) {
+    const e = effects[i];
+    e.t += dt;
+    e.mesh.scale.setScalar(1 + e.t * 12);
+    e.mesh.material.opacity = 0.85 * Math.max(0, 1 - e.t / 0.4);
+    if (e.t > 0.4) { scene.remove(e.mesh); e.mesh.material.dispose(); effects.splice(i, 1); }
+  }
+}
+
+// Strahl gegen Box (Slab-Methode), gibt Entfernung oder null zurück
+function rayBox(o, d, min, max) {
+  let tmin = 0, tmax = Infinity;
+  for (let i = 0; i < 3; i++) {
+    if (Math.abs(d[i]) < 1e-9) {
+      if (o[i] < min[i] || o[i] > max[i]) return null;
+    } else {
+      let t1 = (min[i] - o[i]) / d[i], t2 = (max[i] - o[i]) / d[i];
+      if (t1 > t2) [t1, t2] = [t2, t1];
+      tmin = Math.max(tmin, t1); tmax = Math.min(tmax, t2);
+      if (tmin > tmax) return null;
+    }
+  }
+  return tmin;
+}
+
+function findTargetMob(origin, dir, maxDist) {
+  const o = [origin.x, origin.y, origin.z], d = [dir.x, dir.y, dir.z];
+  let best = null, bestT = maxDist;
+  for (const m of mobs) {
+    if (!m.alive) continue;
+    const { hw, h } = m.def, p = m.pos;
+    const t = rayBox(o, d, [p[0] - hw, p[1], p[2] - hw], [p[0] + hw, p[1] + h, p[2] + hw]);
+    if (t !== null && t < bestT) { bestT = t; best = m; }
+  }
+  return best ? { mob: best, t: bestT } : null;
+}
+
+// ============================================================
+//  Lebenspunkte
+// ============================================================
+const MAX_HP = 20;
+function damagePlayer(amount, fromX, fromZ, knock = 6) {
+  if (player.dead || amount <= 0 || player.hurtCd > 0) return;
+  player.hp -= amount;
+  player.hurtCd = 0.5;
+  player.regenTimer = 0;
+  if (knock) {
+    const dx = player.pos[0] - fromX, dz = player.pos[2] - fromZ, l = Math.hypot(dx, dz) || 1;
+    player.vel[0] = dx / l * knock; player.vel[2] = dz / l * knock;
+    player.vel[1] = Math.max(player.vel[1], 5.5);
+  }
+  hurtEl.style.transition = 'none';
+  hurtEl.style.opacity = 1;
+  requestAnimationFrame(() => { hurtEl.style.transition = 'opacity .5s'; hurtEl.style.opacity = 0; });
+  if (player.hp <= 0) { player.hp = 0; die(); }
+  renderHealth();
+}
+
+function die() {
+  player.dead = true;
+  resetInput();
+  if (locked) document.exitPointerLock();
+  if (touchPlaying) { touchPlaying = false; document.body.classList.remove('playing'); }
+  overlay.style.display = 'none';
+  deathEl.style.display = 'flex';
+}
+
+function respawn() {
+  player.dead = false;
+  player.hp = MAX_HP;
+  player.vel = [0, 0, 0];
+  player.pos = findSpawn();
+  preloadAround();
+  player.fallPeak = player.pos[1];
+  deathEl.style.display = 'none';
+  renderHealth();
+  saveGame();
+  if (IS_TOUCH) setTouchPlaying(true);
+  else canvas.requestPointerLock();
+}
+
+// ============================================================
 //  Interaktion
 // ============================================================
 let hotbar = Array.isArray(saved?.hotbar) && saved.hotbar.length === 9 ? saved.hotbar : HOTBAR_DEFAULT.slice();
 let selectedSlot = saved?.slot ?? 0;
 let target = null;
+let targetMob = null;
+let attackCd = 0;
+
+// Linksklick / ⛏: Mob angreifen oder Block abbauen
+function primaryAction() {
+  if (targetMob) {
+    if (attackCd > 0) return;
+    attackCd = 0.35;
+    targetMob.hurt(4, player.pos[0], player.pos[2]);
+    return;
+  }
+  breakBlock();
+}
 
 function breakBlock() {
   if (!target || target.id === B.BEDROCK) return;
@@ -988,6 +1563,9 @@ const rayDir = new THREE.Vector3();
 function updateTarget() {
   camera.getWorldDirection(rayDir);
   target = raycast(camera.position, rayDir, REACH);
+  const hit = findTargetMob(camera.position, rayDir, target ? target.t : REACH);
+  targetMob = hit ? hit.mob : null;
+  if (targetMob) target = null;
   if (target) {
     highlight.visible = true;
     highlight.position.set(target.x + 0.5, target.y + 0.5, target.z + 0.5);
@@ -1026,6 +1604,42 @@ function selectSlot(i) {
 }
 renderHotbar();
 nameEl.style.opacity = 0;
+
+// Herzen (Pixel-Art)
+const HEART = ['.XX.XX.', 'XRRXRRX', 'XRRRRRX', '.XRRRX.', '..XRX..', '...X...'];
+function heartImage(fill) { // 0 leer, 1 halb, 2 voll
+  const c = document.createElement('canvas'); c.width = 7; c.height = 6;
+  const ctx = c.getContext('2d');
+  HEART.forEach((row, y) => [...row].forEach((ch, x) => {
+    if (ch === '.') return;
+    const red = ch === 'R' && (fill === 2 || (fill === 1 && x <= 3));
+    ctx.fillStyle = ch === 'X' ? '#200' : red ? (y === 1 && x % 3 === 1 ? '#ff8080' : '#e01818') : '#4a2a2a';
+    ctx.fillRect(x, y, 1, 1);
+  }));
+  return c.toDataURL();
+}
+const HEART_IMG = [heartImage(0), heartImage(1), heartImage(2)];
+const healthEl = document.getElementById('health');
+const hurtEl = document.getElementById('hurt');
+const deathEl = document.getElementById('death');
+for (let i = 0; i < 10; i++) healthEl.append(document.createElement('img'));
+function renderHealth() {
+  [...healthEl.children].forEach((img, i) => {
+    const v = Math.max(0, Math.min(2, player.hp - i * 2));
+    img.src = HEART_IMG[v];
+  });
+}
+
+const peacefulBtn = document.getElementById('peaceful');
+function updatePeacefulBtn() { peacefulBtn.textContent = peaceful ? 'Monster: Aus (friedlich)' : 'Monster: An'; }
+peacefulBtn.addEventListener('click', () => {
+  peaceful = !peaceful;
+  if (peaceful) for (const m of mobs) if (m.def.hostile) m.remove();
+  updatePeacefulBtn();
+  saveGame();
+});
+updatePeacefulBtn();
+document.getElementById('respawn').addEventListener('click', respawn);
 
 // ============================================================
 //  Eingabe
@@ -1077,7 +1691,7 @@ canvas.addEventListener('click', () => { if (!IS_TOUCH && !locked) canvas.reques
 
 document.addEventListener('pointerlockchange', () => {
   locked = document.pointerLockElement === canvas;
-  overlay.style.display = locked ? 'none' : 'flex';
+  overlay.style.display = locked || player.dead ? 'none' : 'flex';
   document.getElementById('play').textContent = 'Weiter spielen';
   if (!locked) { resetInput(); saveGame(); }
 });
@@ -1086,7 +1700,7 @@ document.addEventListener('pointerlockchange', () => {
 function setTouchPlaying(on) {
   touchPlaying = on;
   document.body.classList.toggle('playing', on);
-  overlay.style.display = on ? 'none' : 'flex';
+  overlay.style.display = on || player.dead ? 'none' : 'flex';
   document.getElementById('play').textContent = 'Weiter spielen';
   resetInput();
   if (on) document.documentElement.requestFullscreen?.().catch(() => {});
@@ -1156,7 +1770,7 @@ function touchButton(id, down, up) {
     el.addEventListener('pointercancel', end);
   }
 }
-touchButton('t-break', () => startHold(breakBlock), stopHold);
+touchButton('t-break', () => startHold(primaryAction), stopHold);
 touchButton('t-place', () => startHold(placeBlock), stopHold);
 touchButton('t-jump', () => touchKeys.jump = true, () => touchKeys.jump = false);
 touchButton('t-down', () => touchKeys.down = true, () => touchKeys.down = false);
@@ -1173,7 +1787,7 @@ document.addEventListener('mousemove', (e) => {
 
 document.addEventListener('mousedown', (e) => {
   if (!locked) return;
-  if (e.button === 0) startHold(breakBlock);
+  if (e.button === 0) startHold(primaryAction);
   else if (e.button === 2) startHold(placeBlock);
   else if (e.button === 1) { e.preventDefault(); pickBlock(); }
 });
@@ -1222,8 +1836,8 @@ function updateSky(dt) {
   dayTime = (dayTime + dt / DAY_LENGTH) % 1;
   const angle = dayTime * Math.PI * 2;
   const sunH = Math.sin(angle);
-  const daylight = THREE.MathUtils.smoothstep(sunH, -0.15, 0.25);
-  const brightness = 0.2 + 0.8 * daylight;
+  daylight = THREE.MathUtils.smoothstep(sunH, -0.15, 0.25);
+  const brightness = 0.38 + 0.62 * daylight;
 
   skyColor.copy(SKY_NIGHT).lerp(SKY_DAY, daylight);
   const sunset = Math.max(0, 1 - Math.abs(sunH) * 4) * 0.45;
@@ -1242,6 +1856,7 @@ function updateSky(dt) {
   underwaterEl.style.display = underwater ? 'block' : 'none';
 
   const lin = Math.pow(brightness, 2.2);
+  lightLin = lin;
   solidMat.color.setScalar(lin);
   waterMat.color.setScalar(lin);
   cloudMat.color.setScalar(Math.max(0.15, brightness));
@@ -1268,6 +1883,7 @@ if (saved?.player) {
   player.yaw = sp.yaw || 0;
   player.pitch = sp.pitch || 0;
   player.flying = !!sp.flying;
+  if (typeof saved.hp === 'number' && saved.hp > 0) player.hp = Math.min(MAX_HP, saved.hp);
   flyHint.style.display = player.flying ? 'block' : 'none';
   document.getElementById('t-fly').classList.toggle('on', player.flying);
 } else {
@@ -1275,12 +1891,20 @@ if (saved?.player) {
 }
 
 // Umgebung synchron vorladen, damit man nicht ins Leere fällt
-{
+function preloadAround() {
   const pcx = Math.floor(player.pos[0] / CHUNK), pcz = Math.floor(player.pos[2] / CHUNK);
-  for (const [dx, dz] of CHUNK_ORDER) if (dx * dx + dz * dz <= 4) meshChunk(pcx + dx, pcz + dz);
+  for (const [dx, dz] of CHUNK_ORDER) if (dx * dx + dz * dz <= 4) {
+    const c = world.getChunk(pcx + dx, pcz + dz);
+    if (!c || !c.meshed) meshChunk(pcx + dx, pcz + dz);
+  }
   // Falls man in einem Block steckt (z. B. nach Weltänderung), nach oben schieben
   while (collides(player.pos) && player.pos[1] < HEIGHT) player.pos[1] += 1;
 }
+preloadAround();
+// Zugriff für Tests/Entwicklung: index.html?debug
+if (new URLSearchParams(location.search).has('debug')) window.blockwelt = { mobs, Mob, player, world, damagePlayer };
+player.fallPeak = player.pos[1];
+renderHealth();
 camera.position.set(player.pos[0], player.pos[1] + EYE, player.pos[2]);
 document.getElementById('loading').remove();
 overlay.style.display = 'flex';
@@ -1292,8 +1916,13 @@ renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.1);
 
   updateChunks(dt);
-  if (isActive()) updatePlayer(dt);
-  else camera.rotation.set(player.pitch, player.yaw, 0);
+  const running = isActive() && !player.dead;
+  if (running) {
+    updatePlayer(dt);
+    updateMobs(dt);
+  } else camera.rotation.set(player.pitch, player.yaw, 0);
+  updateEffects(dt);
+  attackCd = Math.max(0, attackCd - dt);
   updateTarget();
 
   if (mouseAction && isActive()) {
@@ -1315,7 +1944,9 @@ renderer.setAnimationLoop(() => {
       `Chunk: ${Math.floor(p[0] / CHUNK)}, ${Math.floor(p[2] / CHUNK)}  geladen: ${world.chunks.size}\n` +
       `Uhrzeit: ${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}\n` +
       `Seed: ${seed}\n` +
-      (target ? `Ziel: ${BLOCKS[target.id].name} (${target.x}, ${target.y}, ${target.z})` : '');
+      `Mobs: ${mobs.length}  Leben: ${player.hp}/${MAX_HP}\n` +
+      (targetMob ? `Ziel: ${targetMob.def.name} (${targetMob.hp} HP)` :
+       target ? `Ziel: ${BLOCKS[target.id].name} (${target.x}, ${target.y}, ${target.z})` : '');
   }
 });
 </script>
