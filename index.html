@@ -109,7 +109,9 @@
   #portalfx { position: fixed; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, rgba(160,70,255,.3), rgba(100,20,190,.95)); }
   #underwater { position: fixed; inset: 0; background: rgba(20, 60, 160, .35); pointer-events: none; display: none; }
 
-  #overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.55); }
+  #overlay { position: fixed; inset: 0; display: flex; justify-content: center; background: rgba(0,0,0,.55); overflow-y: auto; padding: 12px 0; }
+  #overlay .panel { margin: auto 0; }   /* mittig, aber auf kleinen Bildschirmen scrollbar statt abgeschnitten */
+  @media (max-height: 520px) { .panel { padding: 14px 24px; } .panel h1 { margin: 0 0 4px; } .panel button { margin: 5px 0; padding: 8px; font-size: 16px; } }
   .panel { background: rgba(20,20,20,.85); border: 3px solid #555; color: #eee; padding: 28px 36px; max-width: 520px; width: calc(100% - 32px); text-align: center; }
   .panel h1 { margin: 0 0 4px; font-size: 44px; letter-spacing: 2px; color: #7ec850; text-shadow: 3px 3px 0 #2d4d1b; }
   .panel p.sub { margin: 0 0 20px; color: #aaa; }
