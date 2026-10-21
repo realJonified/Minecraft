@@ -24,6 +24,26 @@ python3 -m http.server
 
 Den Modus wählst du beim Erstellen einer neuen Welt oder jederzeit im Pausenmenü („Spielmodus“).
 
+### Werkzeuge & Abbauzeiten
+
+Spitzhacken, Äxte, Schaufeln, Hacken und Schwerter gibt es aus **Holz, Stein, Eisen, Gold, Diamant und Netherite**. Alle nutzen sich ab (Haltbarkeitsbalken unter dem Symbol) und gehen irgendwann kaputt.
+
+| Spitzhacke | Stein abbauen | Erze (z. B. Eisen) | Kann abbauen | Haltbarkeit |
+|---|---|---|---|---|
+| Hand | 7,5 s (ohne Drop) | – | – | – |
+| Holz | 6 s | – | Stein, Kohle | 59 |
+| Stein | 4 s | 8 s | + Eisen, Lapis | 131 |
+| Eisen | 3 s | 6 s | + Gold, Diamant, Redstone, Smaragd | 250 |
+| Gold | 2 s | – | Stein, Kohle | 32 |
+| Diamant | 1,5 s | 3 s | + Obsidian, Antiker Schutt | 1561 |
+| Netherite | 1 s | 2 s | alles | 2031 |
+
+**Netherite:** Antiken Schutt tief im Nether (mit Diamantspitzhacke) abbauen → im Ofen zu Netheriteplatten schmelzen → 4 Platten + 4 Goldbarren = Netheritebarren → Diamant-Werkzeug oder -Rüstung + Netheritebarren in der Werkbank = Netherite-Version. Netherite verbrennt nicht in Lava.
+
+### Rüstung
+
+Helm, Brustpanzer, Beinschutz und Stiefel aus **Leder, Ketten, Eisen, Gold, Diamant und Netherite** – mit Rüstungspunkten und Härte wie im echten Minecraft. Anziehen per Rechtsklick mit der Rüstung in der Hand oder in den Rüstungsplätzen im Inventar. Die Rüstungsleiste erscheint über den Herzen. Rüstung schützt vor Monstern, Explosionen und Lava, aber nicht vor Fallschaden, Ertrinken oder Hunger, und nutzt sich bei Treffern ab. Netherite-Rüstung verringert außerdem den Rückstoß.
+
 **Erste Schritte im Überleben:** Baum abbauen → im Inventar (E) Bretter, Stöcke und eine Werkbank herstellen → Holzspitzhacke → Stein abbauen → Steinwerkzeuge und Ofen → Erze suchen, schmelzen und Fleisch braten.
 
 ## Features

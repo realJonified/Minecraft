@@ -66,13 +66,22 @@
   #furnace-ui[style*="flex"] ~ #recipes-label, #furnace-ui[style*="flex"] ~ #recipes { display: none; }
   #craft-ui[style*="flex"] ~ #furnace-hint { display: none; }
   .inv-hint { margin-top: 8px; font-size: 12px; color: #555; max-width: calc(var(--slot) * 9 + 16px); }
-  #blockname { position: fixed; bottom: 128px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 18px; text-shadow: 2px 2px 0 #000; transition: opacity .4s; pointer-events: none; }
+  #blockname { position: fixed; bottom: 132px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 18px; text-shadow: 2px 2px 0 #000; transition: opacity .4s; pointer-events: none; }
 
   #debug { position: fixed; top: 8px; left: 8px; color: #fff; font: 13px/1.4 monospace; text-shadow: 1px 1px 0 #000; white-space: pre; pointer-events: none; display: none; }
   #flyhint { position: fixed; top: 8px; right: 12px; color: #fff; font-size: 14px; text-shadow: 1px 1px 0 #000; display: none; }
   #health { position: fixed; bottom: 84px; left: calc(50% - 272px); display: flex; flex-wrap: wrap; width: 198px; gap: 2px; pointer-events: none; }
   #food, #air { position: fixed; bottom: 84px; left: calc(50% + 74px); display: flex; flex-direction: row-reverse; width: 198px; gap: 2px; pointer-events: none; }
   #air { bottom: 104px; }
+  #armor { position: fixed; bottom: 104px; left: calc(50% - 272px); display: flex; width: 198px; gap: 2px; pointer-events: none; }
+  #armor img { width: 18px; height: 16px; image-rendering: pixelated; }
+  body:not(.survival) #armor { display: none; }
+  body.touch #armor { top: calc(max(8px, env(safe-area-inset-top)) + min(46px, calc((100vw - 150px) / 9)) + 38px); bottom: auto; left: calc(50% - 168px); width: 160px; }
+  body.touch #armor img { width: 14px; height: 12px; }
+  .dur { position: absolute; left: 14%; right: 14%; bottom: 10%; height: 3px; background: #000; pointer-events: none; }
+  .dur div { height: 100%; }
+  .armor-slot:empty::after { content: attr(data-label); font-size: 11px; color: #5e5e5e; }
+  #armor-slots { grid-template-columns: repeat(4, var(--slot)); }
   #health img, #food img, #air img { width: 18px; height: 16px; image-rendering: pixelated; }
   body:not(.survival) #health, body:not(.survival) #food, body:not(.survival) #air { display: none; }
   body.survival #t-fly, body.survival #inv-trash, body.survival .trash-hint { display: none; }
@@ -143,6 +152,7 @@
 <div id="health"></div>
 <div id="food"></div>
 <div id="air"></div>
+<div id="armor"></div>
 <div id="effects"></div>
 <div id="eatbar"><div></div></div>
 <div id="hurt"></div>
@@ -231,6 +241,8 @@
       <div id="recipes-label" class="inv-label">Rezepte (antippen zum Einlegen)</div>
       <div id="recipes" class="inv-grid"></div>
     </div>
+    <div class="inv-label armor-label">Rüstung</div>
+    <div id="armor-slots" class="inv-grid"></div>
     <div class="inv-label">Inventar</div>
     <div id="inv-main" class="inv-grid"></div>
     <div id="inv-hotbar" class="inv-grid"></div>
@@ -292,7 +304,7 @@ const TILE_NAMES = [
   'coarse_dirt', 'podzol_top', 'podzol_side', 'copper_block', 'amethyst', 'bone_top', 'bone_side',
   'deepslate_top', 'deepslate_side', 'cobbled_deepslate', 'deepslate_bricks', 'tuff', 'calcite',
   'basalt_top', 'basalt_side', 'blackstone', 'polished_blackstone_bricks', 'shroomlight', 'moss_block', 'sponge', 'mud_bricks', 'packed_mud',
-  'jukebox_top', 'jukebox_side', 'note_block', 'terracotta',
+  'jukebox_top', 'jukebox_side', 'note_block', 'terracotta', 'ancient_debris_side', 'ancient_debris_top', 'netherite_block',
   ...WOOL_COLORS.map(w => 'concrete_' + w[0]),
   ...WOOL_COLORS.map(w => 'terracotta_' + w[0]),
 ];
@@ -447,6 +459,8 @@ more('JUKEBOX', 'Plattenspieler', ['jukebox_top', 'jukebox_side', 'jukebox_side'
 more('NOTE_BLOCK', 'Notenblock', ['note_block']);
 more('TERRACOTTA', 'Keramik', ['terracotta']);
 WOOL_COLORS.forEach(([key, adj]) => more('TERRACOTTA_' + key.toUpperCase(), adj + ' Keramik', ['terracotta_' + key]));
+more('ANCIENT_DEBRIS', 'Antiker Schutt', ['ancient_debris_top', 'ancient_debris_side', 'ancient_debris_top']);
+more('NETHERITE_BLOCK', 'Netheriteblock', ['netherite_block']);
 const COLOR_KEYS = WOOL_COLORS.map(w => w[0].toUpperCase());
 
 // Brennbare Blöcke (Feuer breitet sich darauf aus)
@@ -503,10 +517,37 @@ item(134, 'ENDER_PEARL', 'Enderperle', { stack: 16 });
 item(135, 'EYE_OF_ENDER', 'Enderauge');
 item(151, 'COPPER_INGOT', 'Kupferbarren');
 // Werkzeuge: tier = Abbaustufe (1 Holz/Gold, 2 Stein, 3 Eisen, 4 Diamant), speed = Abbau-Tempo
+// Haltbarkeit je Material (wie in Minecraft)
+const DURABILITY = { WOODEN: 59, STONE: 131, IRON: 250, GOLDEN: 32, DIAMOND: 1561, NETHERITE: 2031 };
 const TOOL_MATS = [['WOODEN', 'Holz', 1, 2], ['STONE', 'Stein', 2, 4], ['IRON', 'Eisen', 3, 6], ['GOLDEN', 'Gold', 1, 12], ['DIAMOND', 'Diamant', 4, 8]];
 const TOOL_KINDS = [['PICKAXE', 'spitzhacke', 'pickaxe'], ['AXE', 'axt', 'axe'], ['SHOVEL', 'schaufel', 'shovel']];
 TOOL_MATS.forEach(([mat, name, tier, speed], mi) => TOOL_KINDS.forEach(([kind, suffix, type], ki) =>
-  item(136 + mi * 3 + ki, mat + '_' + kind, name + suffix, { tool: { type, tier, speed }, stack: 1 })));
+  item(136 + mi * 3 + ki, mat + '_' + kind, name + suffix, { tool: { type, tier, speed, mat }, stack: 1, dur: DURABILITY[mat] })));
+for (const [mat] of TOOL_MATS) ITEMS[I[mat + '_SWORD']].dur = DURABILITY[mat];
+// Netherite: die stärkste Stufe, verbrennt nicht in Lava
+item(152, 'NETHERITE_SCRAP', 'Netheriteplatten', { fireproof: true });
+item(153, 'NETHERITE_INGOT', 'Netheritebarren', { fireproof: true });
+const NETHERITE = { stack: 1, dur: DURABILITY.NETHERITE, fireproof: true };
+item(300, 'NETHERITE_PICKAXE', 'Netheritespitzhacke', { ...NETHERITE, tool: { type: 'pickaxe', tier: 4, speed: 9, mat: 'NETHERITE' } });
+item(301, 'NETHERITE_AXE', 'Netheriteaxt', { ...NETHERITE, tool: { type: 'axe', tier: 4, speed: 9, mat: 'NETHERITE' } });
+item(302, 'NETHERITE_SHOVEL', 'Netheriteschaufel', { ...NETHERITE, tool: { type: 'shovel', tier: 4, speed: 9, mat: 'NETHERITE' } });
+item(303, 'NETHERITE_SWORD', 'Netheriteschwert', { ...NETHERITE, damage: 9 });
+// Hacken (schnell bei Laub, Heu, Moos, Schwamm)
+const ALL_MATS = [...TOOL_MATS, ['NETHERITE', 'Netherite', 4, 9]];
+ALL_MATS.forEach(([mat, name, tier, speed], i) => item(304 + i, mat + '_HOE', name + 'hacke',
+  { tool: { type: 'hoe', tier, speed, mat }, stack: 1, dur: DURABILITY[mat], fireproof: mat === 'NETHERITE' }));
+// Rüstung: [Material, Namen, Rüstungspunkte (Kopf, Brust, Beine, Füße), Härte, Haltbarkeit]
+const ARMOR_MATS = [
+  ['LEATHER', ['Lederkappe', 'Lederjacke', 'Lederhose', 'Lederstiefel'], [1, 3, 2, 1], 0, [55, 80, 75, 65]],
+  ['CHAINMAIL', ['Kettenhaube', 'Kettenhemd', 'Kettenhose', 'Kettenstiefel'], [2, 5, 4, 1], 0, [165, 240, 225, 195]],
+  ['IRON', ['Eisenhelm', 'Eisenbrustpanzer', 'Eisenbeinschutz', 'Eisenstiefel'], [2, 6, 5, 2], 0, [165, 240, 225, 195]],
+  ['GOLDEN', ['Goldhelm', 'Goldbrustpanzer', 'Goldbeinschutz', 'Goldstiefel'], [2, 5, 3, 1], 0, [77, 112, 105, 91]],
+  ['DIAMOND', ['Diamanthelm', 'Diamantbrustpanzer', 'Diamantbeinschutz', 'Diamantstiefel'], [3, 8, 6, 3], 2, [363, 528, 495, 429]],
+  ['NETHERITE', ['Netheritehelm', 'Netheritebrustpanzer', 'Netheritebeinschutz', 'Netheritestiefel'], [3, 8, 6, 3], 3, [407, 592, 555, 481]],
+];
+const ARMOR_PIECES = ['HELMET', 'CHESTPLATE', 'LEGGINGS', 'BOOTS'];
+ARMOR_MATS.forEach(([mat, names, points, toughness, durs], mi) => ARMOR_PIECES.forEach((piece, slot) =>
+  item(310 + mi * 4 + slot, mat + '_' + piece, names[slot], { armor: { slot, points: points[slot], toughness, mat }, stack: 1, dur: durs[slot], fireproof: mat === 'NETHERITE' })));
 // Sättigung beim Essen (Hungerpunkte stehen in heal)
 const SATURATION = { APPLE: 2.4, GOLDEN_APPLE: 9.6, ENCHANTED_GOLDEN_APPLE: 9.6, PORKCHOP: 1.8, COOKED_PORKCHOP: 12.8, BEEF: 1.8, STEAK: 12.8,
   MUTTON: 1.2, COOKED_MUTTON: 9.6, CHICKEN: 1.2, COOKED_CHICKEN: 7.2, ROTTEN_FLESH: 0.8 };
@@ -519,13 +560,13 @@ const CREATIVE_TABS = {
     B.POLISHED_GRANITE, B.POLISHED_DIORITE, B.POLISHED_ANDESITE, B.COBBLED_DEEPSLATE, B.DEEPSLATE_BRICKS, B.BRICK, B.MUD_BRICKS, B.PACKED_MUD,
     B.SANDSTONE, B.RED_SANDSTONE, B.PLANKS, B.BIRCH_PLANKS, B.SPRUCE_PLANKS, B.JUNGLE_PLANKS, B.ACACIA_PLANKS, B.DARK_OAK_PLANKS,
     B.QUARTZ, B.PURPUR, B.END_STONE_BRICKS, B.NETHER_BRICKS, B.POLISHED_BLACKSTONE_BRICKS, B.PRISMARINE, B.PRISMARINE_BRICKS, B.DARK_PRISMARINE,
-    B.GOLD_BLOCK, B.IRON_BLOCK, B.COPPER_BLOCK, B.REDSTONE_BLOCK, B.LAPIS_BLOCK, B.DIAMOND_BLOCK, B.EMERALD_BLOCK, B.BONE_BLOCK, B.GLASS]],
+    B.GOLD_BLOCK, B.IRON_BLOCK, B.COPPER_BLOCK, B.REDSTONE_BLOCK, B.LAPIS_BLOCK, B.DIAMOND_BLOCK, B.EMERALD_BLOCK, B.NETHERITE_BLOCK, B.BONE_BLOCK, B.GLASS]],
   natur: ['🌲', 'Natur', [B.GRASS, B.DIRT, B.COARSE_DIRT, B.PODZOL, B.SNOW, B.SNOW_BLOCK, B.MOSS_BLOCK, B.SAND, B.RED_SAND, B.GRAVEL, B.CLAY, B.ICE, B.WATER, B.LAVA,
     B.STONE, B.GRANITE, B.DIORITE, B.ANDESITE, B.DEEPSLATE, B.TUFF, B.CALCITE, B.BEDROCK, B.OBSIDIAN,
     B.LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG,
     B.LEAVES, B.BIRCH_LEAVES, B.SPRUCE_LEAVES, B.JUNGLE_LEAVES, B.ACACIA_LEAVES, B.DARK_OAK_LEAVES,
     B.COAL_ORE, B.IRON_ORE, B.GOLD_ORE, B.REDSTONE_ORE, B.LAPIS_ORE, B.DIAMOND_ORE, B.EMERALD_ORE, B.AMETHYST,
-    B.NETHERRACK, B.SOUL_SAND, B.NETHER_QUARTZ_ORE, B.NETHER_GOLD_ORE, B.MAGMA, B.BASALT, B.BLACKSTONE, B.END_STONE, B.CACTUS, B.PUMPKIN, B.MELON]],
+    B.NETHERRACK, B.SOUL_SAND, B.NETHER_QUARTZ_ORE, B.NETHER_GOLD_ORE, B.ANCIENT_DEBRIS, B.MAGMA, B.BASALT, B.BLACKSTONE, B.END_STONE, B.CACTUS, B.PUMPKIN, B.MELON]],
   farben: ['🎨', 'Farben', [...COLOR_KEYS.map(k => B['WOOL_' + k]), ...COLOR_KEYS.map(k => B['CONCRETE_' + k]), B.TERRACOTTA, ...COLOR_KEYS.map(k => B['TERRACOTTA_' + k])]],
   deko: ['🏮', 'Deko', [B.GLOWSTONE, B.SEA_LANTERN, B.SHROOMLIGHT, B.JACK_O_LANTERN, B.BOOKSHELF, B.CRAFTING, B.FURNACE, B.JUKEBOX, B.NOTE_BLOCK,
     B.TNT, B.HAY, B.SPONGE, B.END_FRAME, B.DRAGON_EGG]],
@@ -901,6 +942,7 @@ function makeAtlas() {
   metal('lapis_block', ['#1f3c94', '#2747a8', '#3557c0'], '#6f8fea', '#142a6e');
   metal('quartz', ['#e6dfd3', '#ece6dc', '#f2ede6'], '#ffffff', '#c9c1b3');
   metal('copper_block', ['#b8603f', '#c06a4a', '#cc7552', '#d4825c'], '#f0a888', '#8a4430');
+  metal('netherite_block', ['#3e3a3c', '#454143', '#4c4749', '#524d4f'], '#6a6466', '#242022');
 
   // ---- Möbel & Spezialblöcke ----
   const oakPlanks = planks(P.oakWood, '#634c2e');
@@ -1117,6 +1159,11 @@ function makeAtlas() {
       return n(x, y);
     });
   }
+  {
+    const n = noisy(['#3e2c22', '#4a3428', '#5a4032', '#664a3a'], 8, 0.5);
+    tile('ancient_debris_side', (x, y) => Math.floor(Math.hypot(((x + 8) % 16) - 7.5, ((y + 4) % 16) - 7.5) * 0.9) % 3 === 0 ? mul(n(x, y), 0.72) : n(x, y));
+    tile('ancient_debris_top', (x, y) => Math.floor(Math.hypot(x - M, y - M) * 0.8) % 2 ? mul(n(x, y), 0.8) : mul(n(x, y), 1.12));
+  }
   ore('nether_quartz_ore', ['#e8e2d6', '#bdb3a2', '#ffffff'], netherrack, 7);
   ore('nether_gold_ore', ['#f5d04a', '#c99a1a', '#fff3a0'], netherrack, 8);
   tile('nether_bricks', masonry(noisy(['#2c1418', '#371a1e', '#43202a'], 6, 0.6), 8, 16, 8, '#140708'));
@@ -1195,6 +1242,13 @@ function makeIcon(atlas, id) {
 }
 
 // ---------- Item-Icons als Pixel-Art (16×16) ----------
+const TOOL_COLORS = { WOODEN: ['#b08a52', '#6b5230'], STONE: ['#a0a0a0', '#6a6a6a'], IRON: ['#ffffff', '#c0c0c0'], GOLDEN: ['#fff27a', '#e8b520'],
+  DIAMOND: ['#8cf8f0', '#2bc7ac'], NETHERITE: ['#7a7274', '#3a3436'] };
+const ARMOR_COLORS = {
+  LEATHER: { o: '#3a1e0a', h: '#c8834a', m: '#a0602e', d: '#6e3e1a' }, CHAINMAIL: { o: '#2a2a2a', h: '#d8d8d8', m: '#8a8a8a', d: '#555555' },
+  IRON: { o: '#3a3a3a', h: '#ffffff', m: '#d8d8d8', d: '#9a9a9a' }, GOLDEN: { o: '#5a3e06', h: '#fff8a0', m: '#f2cf3a', d: '#c9971a' },
+  DIAMOND: { o: '#0e4a4a', h: '#c8fff8', m: '#4ae0d6', d: '#1fa69a' }, NETHERITE: { o: '#141012', h: '#7a7274', m: '#4a4446', d: '#2e2a2c' },
+};
 const ITEM_ART = {
   apple: [
     '................', '........kk......', '........k.gg....', '.......kkggg....', '....ddd.k.ddd...', '...drrrdkdrrrd..', '..drwwrrrrrrrrd.', '..drwrrrrrrrrrd.',
@@ -1244,6 +1298,21 @@ const ITEM_ART = {
   shovel: [
     '................', '...........ooo..', '..........ohhho.', '.........ohhddo.', '.........ohddo..', '........osooo...', '.......oso......', '......oso.......',
     '.....oso........', '....oso.........', '...oso..........', '..oso...........', '.oo.............', '................', '................', '................'],
+  hoe: [
+    '................', '.......oooooo...', '......ohhhhdo...', '......ooooodo...', '.........oso....', '........oso.....', '.......oso......', '......oso.......',
+    '.....oso........', '....oso.........', '...oso..........', '..oso...........', '.oo.............', '................', '................', '................'],
+  helmet: [
+    '................', '................', '................', '....oooooooo....', '...ohhhhhhmmo...', '..ohhmmmmmmmdo..', '..ohmmmmmmmmdo..', '..ommo....omdo..',
+    '..omdo....omdo..', '..oddo....oddo..', '...oo......oo...', '................', '................', '................', '................', '................'],
+  chestplate: [
+    '................', '..ooo......ooo..', '.ohhmo....ohmmo.', '.ohmmmooooommdo.', '.ommmmmmmmmmmdo.', '..ooommmmmmooo..', '....ommmmmmo....', '....ohmmmmdo....',
+    '....ommmmmdo....', '....ommmmmdo....', '....ommmmmdo....', '....oddddddo....', '.....oooooo.....', '................', '................', '................'],
+  leggings: [
+    '................', '................', '....oooooooo....', '....ohhmmmmo....', '....ommmmmdo....', '....ommoommo....', '....ommoommo....', '....omdoomdo....',
+    '....omdoomdo....', '....omdoomdo....', '....omdoomdo....', '....oddooddo....', '....oooooooo....', '................', '................', '................'],
+  boots: [
+    '................', '................', '................', '................', '................', '................', '...oooo..oooo...', '...ohmo..ohmo...',
+    '...ommo..ommo...', '...ommo..ommo...', '..ohmmo..ohmmo..', '..ommdo..ommdo..', '..ooooo..ooooo..', '................', '................', '................'],
   tear: [
     '................', '................', '.......o........', '......owo.......', '......owo.......', '.....owwco......', '.....owwco......', '....owwwcco.....',
     '....owwwcco.....', '....owwccco.....', '.....occco......', '......ooo.......', '................', '................', '................', '................'],
@@ -1291,6 +1360,17 @@ const ITEM_LOOK = {
     const [h, d] = [['#b08a52', '#6b5230'], ['#a0a0a0', '#6a6a6a'], ['#ffffff', '#c0c0c0'], ['#fff27a', '#e8b520'], ['#8cf8f0', '#2bc7ac']][mi];
     return TOOL_KINDS.map(([kind, , type]) => [mat + '_' + kind, [type, { o: '#2a2a2a', h, d, s: '#6b4a26' }]]);
   })),
+  ...Object.fromEntries(ALL_MATS.map(([mat], i) => {
+    const [h, d] = TOOL_COLORS[mat];
+    return [mat + '_HOE', ['hoe', { o: '#2a2a2a', h, d, s: '#6b4a26' }]];
+  })),
+  NETHERITE_PICKAXE: ['pickaxe', { o: '#1a1618', h: TOOL_COLORS.NETHERITE[0], d: TOOL_COLORS.NETHERITE[1], s: '#6b4a26' }],
+  NETHERITE_AXE: ['axe', { o: '#1a1618', h: TOOL_COLORS.NETHERITE[0], d: TOOL_COLORS.NETHERITE[1], s: '#6b4a26' }],
+  NETHERITE_SHOVEL: ['shovel', { o: '#1a1618', h: TOOL_COLORS.NETHERITE[0], d: TOOL_COLORS.NETHERITE[1], s: '#6b4a26' }],
+  NETHERITE_SWORD: ['sword', { o: '#1a1618', b: '#7a7274', d: '#3a3436', h: '#5a4020', s: '#6b4a26' }],
+  NETHERITE_SCRAP: ['lump', { o: '#1e1612', h: '#7a5e4a', c: '#4e3a2c', d: '#3a2a20' }],
+  NETHERITE_INGOT: ['ingot', { h: '#8a8284', w: '#5a5456', m: '#454042', o: '#1e1a1c' }],
+  ...Object.fromEntries(ARMOR_MATS.flatMap(([mat]) => ARMOR_PIECES.map(piece => [mat + '_' + piece, [piece.toLowerCase(), ARMOR_COLORS[mat]]]))),
   ENDER_PEARL: ['orb', { o: '#0a2a26', c: '#1a6b5e', h: '#6fe0c8' }],
   EYE_OF_ENDER: ['orb', { o: '#0a2a1a', c: '#3aa86a', h: '#b8f8d0', p: '#0a1a10' }],
 };
@@ -1674,6 +1754,11 @@ class World {
       }
     }
     // Erzadern im Netherrack
+    // Antiker Schutt: selten und tief
+    for (let t = 0; t < 2; t++) {
+      const x = ri(16), y = 8 + ri(15), z = ri(16);
+      if (d[idx(x, y, z)] === B.NETHERRACK) d[idx(x, y, z)] = B.ANCIENT_DEBRIS;
+    }
     for (const [id, tries, size] of [[B.NETHER_QUARTZ_ORE, 14, 9], [B.NETHER_GOLD_ORE, 8, 6]]) for (let t = 0; t < tries; t++) {
       let x = ri(16), y = 5 + ri(HEIGHT - 10), z = ri(16);
       for (let k = 0; k < size; k++) {
@@ -2127,7 +2212,8 @@ function saveGame() {
       hp: player.hp,
       peaceful,
       slot: selectedSlot,
-      inventory: inventory.map(st => st ? [st.id, st.n === Infinity ? -1 : st.n] : null),
+      inventory: inventory.map(st => st ? [st.id, st.n === Infinity ? -1 : st.n, st.d || 0] : null),
+      armor: armor.map(st => st ? [st.id, 1, st.d || 0] : null),
       furnaces: [...furnaces.values()].map(f => [f.key, f.slots.map(serStack), f.burn, f.burnMax, f.progress]),
     }));
   } catch (e) { console.warn('Speichern fehlgeschlagen', e); }
@@ -2353,7 +2439,7 @@ function updatePlayer(dt) {
   else if (!player.onGround) player.fallPeak = Math.max(player.fallPeak, p[1]);
   else {
     const fall = player.fallPeak - p[1];
-    if (fall > 3.5) { player.hurtCd = 0; damagePlayer(Math.floor(fall - 3), p[0], p[2], 0); }
+    if (fall > 3.5) { player.hurtCd = 0; damagePlayer(Math.floor(fall - 3), p[0], p[2], 0, true); }
     player.fallPeak = p[1];
   }
   // Am Wasserrand automatisch herausklettern
@@ -2363,7 +2449,7 @@ function updatePlayer(dt) {
   }
   if (p[1] < -20) {
     // im End fällt man ins Nichts
-    if (world.dim === 'end') { player.hurtCd = 0; player.absorb = 0; damagePlayer(1000, 0, 0, 0); }
+    if (world.dim === 'end') { player.hurtCd = 0; player.absorb = 0; damagePlayer(1000, 0, 0, 0, true); }
     else { p[1] = HEIGHT; v[1] = 0; }
   }
   updateHazards(dt, below);
@@ -3288,8 +3374,8 @@ function itemSpriteMaterial(id) {
 // Fallengelassener Gegenstand, der eingesammelt werden kann
 const drops = [];
 class Drop {
-  constructor(id, n, x, y, z) {
-    this.id = id; this.n = n;
+  constructor(id, n, x, y, z, d = 0) {
+    this.id = id; this.n = n; this.d = d;
     this.pos = [x, y, z];
     this.vel = [(Math.random() - 0.5) * 3, 4 + Math.random() * 2, (Math.random() - 0.5) * 3];
     this.age = 0;
@@ -3307,12 +3393,12 @@ class Drop {
     // weit weg: liegen lassen, bis der Spieler zurückkommt
     this.mesh.visible = !!world.getChunk(Math.floor(p[0]) >> 4, Math.floor(p[2]) >> 4)?.meshed;
     if (!this.mesh.visible) return;
-    if (world.getBlock(Math.floor(p[0]), Math.floor(p[1] + 0.1), Math.floor(p[2])) === B.LAVA) { this.remove(); return; }   // verbrennt
+    if (!ITEMS[this.id]?.fireproof && world.getBlock(Math.floor(p[0]), Math.floor(p[1] + 0.1), Math.floor(p[2])) === B.LAVA) { this.remove(); return; }   // verbrennt (außer Netherite)
     const dx = player.pos[0] - p[0], dy = player.pos[1] + 0.8 - p[1], dz = player.pos[2] - p[2];
     const dist = Math.hypot(dx, dy, dz);
     const canPick = this.age > 0.6 && !player.dead;
     if (canPick && dist < 1.3) {
-      const left = addItem(this.id, this.n);
+      const left = addItem(this.id, this.n, this.d);
       if (left === 0) { this.remove(); return; }
       this.n = left;
     }
@@ -3615,12 +3701,20 @@ function travelEnd() {
 //  Lebenspunkte
 // ============================================================
 const MAX_HP = 20;
-function damagePlayer(amount, fromX, fromZ, knock = 6) {
+function damagePlayer(amount, fromX, fromZ, knock = 6, bypassArmor = false) {
   if (player.dead || amount <= 0 || player.hurtCd > 0) return;
   if (!isSurvival() && amount < 1000) return;   // im Kreativmodus unverwundbar (außer im Nichts)
   // Resistenz verringert Schaden, goldene Herzen fangen ihn zuerst ab
   const res = player.effects.resistance;
   if (res) amount *= Math.max(0, 1 - 0.2 * res.level);
+  // Rüstung wie in Minecraft: Rüstungspunkte und Härte verringern den Schaden
+  const armorInfo = armorStats();
+  if (!bypassArmor && armorInfo.points > 0) {
+    const f = Math.min(20, Math.max(armorInfo.points / 5, armorInfo.points - 4 * amount / (armorInfo.toughness + 8)));
+    damageArmor(amount);
+    amount *= 1 - f / 25;
+  }
+  knock *= 1 - 0.1 * armorInfo.netherite;
   const absorbed = Math.min(player.absorb, amount);
   player.absorb -= absorbed;
   amount -= absorbed;
@@ -3700,7 +3794,7 @@ function updateHazards(dt, below) {
   if (player.fire > 0) {
     player.fire -= dt;
     player.fireTick += dt;
-    if (player.fireTick >= 1) { player.fireTick = 0; player.hurtCd = 0; damagePlayer(1, 0, 0, 0); }
+    if (player.fireTick >= 1) { player.fireTick = 0; player.hurtCd = 0; damagePlayer(1, 0, 0, 0, true); }
   }
   if (below === B.MAGMA && player.onGround && !fireRes) {
     player.magmaTick += dt;
@@ -3723,7 +3817,7 @@ function updateHunger(dt, sprinting) {
   if (player.hungerTick >= 4) {
     player.hungerTick = 0;
     if (player.food >= 18 && player.hp < MAX_HP) { player.hp = Math.min(MAX_HP, player.hp + 1); player.exhaustion += 3; renderHealth(); }
-    else if (player.food <= 0 && player.hp > 1) { player.hurtCd = 0; damagePlayer(1, 0, 0, 0); }
+    else if (player.food <= 0 && player.hp > 1) { player.hurtCd = 0; damagePlayer(1, 0, 0, 0, true); }
   }
   // Ertrinken
   const p = player.pos;
@@ -3731,7 +3825,7 @@ function updateHunger(dt, sprinting) {
     player.air = Math.max(0, player.air - dt);
     if (player.air <= 0) {
       player.drownTick += dt;
-      if (player.drownTick >= 1) { player.drownTick = 0; player.hurtCd = 0; damagePlayer(2, 0, 0, 0); }
+      if (player.drownTick >= 1) { player.drownTick = 0; player.hurtCd = 0; damagePlayer(2, 0, 0, 0, true); }
     }
   } else player.air = Math.min(MAX_AIR, player.air + dt * 5);
   renderAir();
@@ -3751,9 +3845,11 @@ function die() {
   if (isSurvival()) {
     for (let i = 0; i < INV_SIZE; i++) {
       const st = inventory[i];
-      if (st && st.n !== Infinity) drops.push(new Drop(st.id, st.n, player.pos[0], player.pos[1] + 1, player.pos[2]));
+      if (st && st.n !== Infinity) drops.push(new Drop(st.id, st.n, player.pos[0], player.pos[1] + 1, player.pos[2], st.d || 0));
       inventory[i] = null;
     }
+    armor.forEach((st, i) => { if (st) drops.push(new Drop(st.id, 1, player.pos[0], player.pos[1] + 1, player.pos[2], st.d || 0)); armor[i] = null; });
+    renderArmorHud();
     renderHotbar();
   }
   resetInput();
@@ -3963,24 +4059,57 @@ function useFlintAndSteel() {
 const INV_SIZE = 36;
 const inventory = new Array(INV_SIZE).fill(null);
 if (Array.isArray(saved?.inventory)) {
-  saved.inventory.forEach((s, i) => { if (s && i < INV_SIZE && itemExists(s[0])) inventory[i] = { id: s[0], n: s[1] < 0 ? Infinity : s[1] }; });
+  saved.inventory.forEach((s, i) => { if (s && i < INV_SIZE && itemExists(s[0])) inventory[i] = { id: s[0], n: s[1] < 0 ? Infinity : s[1], d: s[2] || 0 }; });
 } else {
   if (gameMode === 'creative') (Array.isArray(saved?.hotbar) ? saved.hotbar : HOTBAR_DEFAULT).slice(0, 9).forEach((id, i) => { if (itemExists(id)) inventory[i] = { id, n: Infinity }; });
 }
 let selectedSlot = Math.min(8, Math.max(0, saved?.slot ?? 0));
 const heldItem = () => inventory[selectedSlot];
+// Rüstung: 0 Kopf, 1 Brust, 2 Beine, 3 Füße
+const armor = [0, 1, 2, 3].map(i => { const a = saved?.armor?.[i]; return a && itemExists(a[0]) ? { id: a[0], n: 1, d: a[2] || 0 } : null; });
+function armorStats() {
+  let points = 0, toughness = 0, netherite = 0;
+  for (const st of armor) {
+    const a = st && ITEMS[st.id]?.armor;
+    if (!a) continue;
+    points += a.points; toughness += a.toughness;
+    if (a.mat === 'NETHERITE') netherite++;
+  }
+  return { points, toughness, netherite };
+}
+// Werkzeug in der Hand abnutzen (nur im Überlebensmodus)
+function damageHeld(amount) {
+  if (!isSurvival()) return;
+  const st = heldItem(), it = st && ITEMS[st.id];
+  if (!it?.dur || st.n === Infinity) return;
+  st.d = (st.d || 0) + amount;
+  if (st.d >= it.dur) { inventory[selectedSlot] = null; showName(it.name + ' ist kaputt gegangen!'); }
+  inventoryChanged();
+}
+function damageArmor(amount) {
+  if (!isSurvival()) return;
+  const k = Math.max(1, Math.floor(amount / 4));
+  armor.forEach((st, i) => {
+    if (!st) return;
+    const it = ITEMS[st.id];
+    st.d = (st.d || 0) + k;
+    if (st.d >= it.dur) { armor[i] = null; showName(it.name + ' ist kaputt gegangen!'); }
+  });
+  renderArmorHud();
+  if (invOpen) renderInventory();
+}
 let target = null;
 let targetMob = null;
 let attackCd = 0;
 
 // Legt Gegenstände ins Inventar und gibt zurück, wie viele nicht mehr gepasst haben
-function addItem(id, n) {
+function addItem(id, n, d = 0) {
   if (inventory.some(s => s && s.id === id && s.n === Infinity)) return 0;
   for (const s of inventory) {
     if (n > 0 && s && s.id === id && s.n < maxStack(id)) { const k = Math.min(n, maxStack(id) - s.n); s.n += k; n -= k; }
   }
   for (let i = 0; i < INV_SIZE && n > 0; i++) {
-    if (!inventory[i]) { const k = Math.min(n, maxStack(id)); inventory[i] = { id, n: k }; n -= k; }
+    if (!inventory[i]) { const k = Math.min(n, maxStack(id)); inventory[i] = { id, n: k, d }; n -= k; }
   }
   inventoryChanged();
   return n;
@@ -4012,7 +4141,7 @@ function primaryAction() {
   if (targetMob) {
     if (attackCd > 0) return;
     attackCd = 0.35;
-    targetMob.hurt(ITEMS[heldItem()?.id]?.damage ?? 4, player.pos[0], player.pos[2], 7, true);
+    if (targetMob.hurt(ITEMS[heldItem()?.id]?.damage ?? 4, player.pos[0], player.pos[2], 7, true)) damageHeld(1);
     if (isSurvival()) player.exhaustion += 0.1;
     return;
   }
@@ -4036,7 +4165,7 @@ function breakBlock() {
   if (id === B.FURNACE || id === B.FURNACE_LIT) removeFurnace(x, y, z);
   const drop = blockDrop(id);
   if (drop && survival && canHarvest(id, heldItem()?.id)) drops.push(new Drop(drop[0], drop[1], x + 0.5, y + 0.3, z + 0.5));
-  if (survival) player.exhaustion += 0.005;
+  if (survival) { player.exhaustion += 0.005; if (HARDNESS[id] > 0) damageHeld(1); }
   scheduleSave();
 }
 
@@ -4079,11 +4208,15 @@ for (const id of [B.POLISHED_GRANITE, B.POLISHED_DIORITE, B.POLISHED_ANDESITE, B
                   ...COLOR_KEYS.map(k => B['CONCRETE_' + k]), ...COLOR_KEYS.map(k => B['TERRACOTTA_' + k])]) TOOL_FOR[id] = 'pickaxe';
 for (const id of [B.RED_SAND, B.COARSE_DIRT, B.PODZOL, B.SNOW_BLOCK]) TOOL_FOR[id] = 'shovel';
 for (const id of [B.GRASS, B.DIRT, B.SNOW, B.SAND, B.GRAVEL, B.CLAY, B.SOUL_SAND]) TOOL_FOR[id] = 'shovel';
+for (const id of [B.LEAVES, B.BIRCH_LEAVES, B.SPRUCE_LEAVES, B.JUNGLE_LEAVES, B.ACACIA_LEAVES, B.DARK_OAK_LEAVES, B.HAY, B.SPONGE, B.MOSS_BLOCK, B.SHROOMLIGHT]) TOOL_FOR[id] = 'hoe';
+TOOL_FOR[B.ANCIENT_DEBRIS] = TOOL_FOR[B.NETHERITE_BLOCK] = 'pickaxe';
+HARDNESS[B.ANCIENT_DEBRIS] = 30;
+HARDNESS[B.NETHERITE_BLOCK] = 50;
 // Mindest-Spitzhacke, damit etwas fällt (1 = Holz, 2 = Stein, 3 = Eisen, 4 = Diamant)
 const NEED_TIER = {
   [B.IRON_ORE]: 2, [B.LAPIS_ORE]: 2, [B.IRON_BLOCK]: 2, [B.LAPIS_BLOCK]: 2,
   [B.GOLD_ORE]: 3, [B.DIAMOND_ORE]: 3, [B.EMERALD_ORE]: 3, [B.REDSTONE_ORE]: 3, [B.GOLD_BLOCK]: 3, [B.DIAMOND_BLOCK]: 3, [B.EMERALD_BLOCK]: 3, [B.REDSTONE_BLOCK]: 3,
-  [B.OBSIDIAN]: 4, [B.COPPER_BLOCK]: 2,
+  [B.OBSIDIAN]: 4, [B.COPPER_BLOCK]: 2, [B.ANCIENT_DEBRIS]: 4, [B.NETHERITE_BLOCK]: 4,
 };
 function canHarvest(blockId, heldId) {
   const need = NEED_TIER[blockId] ?? (TOOL_FOR[blockId] === 'pickaxe' && blockId !== B.ICE && blockId !== B.GLOWSTONE ? 1 : 0);
@@ -4091,13 +4224,21 @@ function canHarvest(blockId, heldId) {
   const tool = ITEMS[heldId]?.tool;
   return tool?.type === 'pickaxe' && tool.tier >= need;
 }
+// Spitzhacken: Sekunden für einen normalen Steinblock (härtere Blöcke dauern entsprechend länger)
+const PICKAXE_TIME = { WOODEN: 6, STONE: 4, IRON: 3, GOLDEN: 2, DIAMOND: 1.5, NETHERITE: 1 };
 function breakTime(blockId, heldId) {
   const h = HARDNESS[blockId] ?? 1;
   if (h === Infinity) return Infinity;
   if (h === 0) return 0.05;
   const tool = ITEMS[heldId]?.tool;
-  const speed = tool && tool.type === TOOL_FOR[blockId] ? tool.speed : 1;
-  return h * (canHarvest(blockId, heldId) ? 1.5 : 5) / speed;
+  const right = tool && tool.type === TOOL_FOR[blockId];
+  if (!canHarvest(blockId, heldId)) return h * 5;           // falsches Werkzeug: sehr langsam und ohne Drop
+  const hand = h * 1.5;
+  if (right && tool.type === 'pickaxe') {
+    const t = Math.min(h / 1.5, 6) * PICKAXE_TIME[tool.mat];
+    return canHarvest(blockId, 0) ? Math.min(hand, t) : t;   // z. B. Eis geht auch mit der Hand
+  }
+  return right ? hand / tool.speed : hand;
 }
 
 // Was ein abgebauter Block fallen lässt (Standard: sich selbst)
@@ -4150,6 +4291,17 @@ const RECIPES = [
     ];
   }),
   { shape: ['##', '##'], key: { '#': [B.END_STONE] }, out: [B.END_STONE_BRICKS, 4] },
+  ...TOOL_MATS.map(([mat], mi) => ({ shape: ['MM', ' S', ' S'], key: { M: [ANY_PLANKS, [B.COBBLE], [I.IRON_INGOT], [I.GOLD_INGOT], [I.DIAMOND]][mi], S: [I.STICK] }, out: [I[mat + '_HOE'], 1] })),
+  // Rüstung aus Leder, Eisen, Gold und Diamant
+  ...[['LEATHER', I.LEATHER], ['IRON', I.IRON_INGOT], ['GOLDEN', I.GOLD_INGOT], ['DIAMOND', I.DIAMOND]].flatMap(([mat, m]) => [
+    { shape: ['MMM', 'M M'], key: { M: [m] }, out: [I[mat + '_HELMET'], 1] },
+    { shape: ['M M', 'MMM', 'MMM'], key: { M: [m] }, out: [I[mat + '_CHESTPLATE'], 1] },
+    { shape: ['MMM', 'M M', 'M M'], key: { M: [m] }, out: [I[mat + '_LEGGINGS'], 1] },
+    { shape: ['M M', 'M M'], key: { M: [m] }, out: [I[mat + '_BOOTS'], 1] },
+  ]),
+  // Netherite: 4 Platten + 4 Goldbarren, dann Diamant-Ausrüstung aufwerten
+  { shapeless: [[I.NETHERITE_SCRAP], [I.NETHERITE_SCRAP], [I.NETHERITE_SCRAP], [I.NETHERITE_SCRAP], [I.GOLD_INGOT], [I.GOLD_INGOT], [I.GOLD_INGOT], [I.GOLD_INGOT]], out: [I.NETHERITE_INGOT, 1] },
+  ...['PICKAXE', 'AXE', 'SHOVEL', 'SWORD', 'HOE', ...ARMOR_PIECES].map(k => ({ shapeless: [[I['DIAMOND_' + k]], [I.NETHERITE_INGOT]], out: [I['NETHERITE_' + k], 1] })),
   { shape: ['##', '##'], key: { '#': [B.GRANITE] }, out: [B.POLISHED_GRANITE, 4] },
   { shape: ['##', '##'], key: { '#': [B.DIORITE] }, out: [B.POLISHED_DIORITE, 4] },
   { shape: ['##', '##'], key: { '#': [B.ANDESITE] }, out: [B.POLISHED_ANDESITE, 4] },
@@ -4168,7 +4320,7 @@ const RECIPES = [
   // Gefärbte Keramik: Keramik + Wolle der passenden Farbe
   ...COLOR_KEYS.map(k => ({ shapeless: [[B.TERRACOTTA], [B['WOOL_' + k]]], out: [B['TERRACOTTA_' + k], 1] })),
   ...[[I.GOLD_INGOT, B.GOLD_BLOCK], [I.IRON_INGOT, B.IRON_BLOCK], [I.DIAMOND, B.DIAMOND_BLOCK], [I.EMERALD, B.EMERALD_BLOCK],
-      [I.REDSTONE, B.REDSTONE_BLOCK], [I.LAPIS, B.LAPIS_BLOCK], [I.GOLD_NUGGET, I.GOLD_INGOT]].flatMap(([small, big]) => [
+      [I.REDSTONE, B.REDSTONE_BLOCK], [I.LAPIS, B.LAPIS_BLOCK], [I.GOLD_NUGGET, I.GOLD_INGOT], [I.NETHERITE_INGOT, B.NETHERITE_BLOCK]].flatMap(([small, big]) => [
     { shape: ['###', '###', '###'], key: { '#': [small] }, out: [big, 1] },
     { shapeless: [[big]], out: [small, 9] },
   ]),
@@ -4219,16 +4371,16 @@ const SMELT = {
   [B.LAPIS_ORE]: I.LAPIS, [B.NETHER_QUARTZ_ORE]: I.QUARTZ,
   [B.SAND]: B.GLASS, [B.COBBLE]: B.STONE, [B.CLAY]: B.BRICK, [B.NETHERRACK]: B.NETHER_BRICKS,
   ...Object.fromEntries(ANY_LOG.map(id => [id, I.CHARCOAL])),
-  [B.COBBLED_DEEPSLATE]: B.DEEPSLATE, [B.RED_SAND]: B.GLASS, [B.STONE]: B.SMOOTH_STONE, [B.STONE_BRICKS]: B.CRACKED_STONE_BRICKS, [B.SPONGE]: B.SPONGE,
+  [B.ANCIENT_DEBRIS]: I.NETHERITE_SCRAP, [B.COBBLED_DEEPSLATE]: B.DEEPSLATE, [B.RED_SAND]: B.GLASS, [B.STONE]: B.SMOOTH_STONE, [B.STONE_BRICKS]: B.CRACKED_STONE_BRICKS, [B.SPONGE]: B.SPONGE,
 };
 // Brenndauer in Sekunden (eine Kohle reicht für 8 Gegenstände)
 const FUEL = {
   [I.COAL]: 40, [I.CHARCOAL]: 40, [I.STICK]: 2.5, [B.CRAFTING]: 7.5, [B.BOOKSHELF]: 7.5, [I.WOODEN_SWORD]: 5,
-  [I.WOODEN_PICKAXE]: 5, [I.WOODEN_AXE]: 5, [I.WOODEN_SHOVEL]: 5,
+  [I.WOODEN_PICKAXE]: 5, [I.WOODEN_AXE]: 5, [I.WOODEN_SHOVEL]: 5, [I.WOODEN_HOE]: 5,
   ...Object.fromEntries([...ANY_PLANKS, ...ANY_LOG].map(id => [id, 7.5])),
 };
-const serStack = (st) => st ? [st.id, st.n === Infinity ? -1 : st.n] : null;
-const deStack = (a) => a && itemExists(a[0]) ? { id: a[0], n: a[1] < 0 ? Infinity : a[1] } : null;
+const serStack = (st) => st ? [st.id, st.n === Infinity ? -1 : st.n, st.d || 0] : null;
+const deStack = (a) => a && itemExists(a[0]) ? { id: a[0], n: a[1] < 0 ? Infinity : a[1], d: a[2] || 0 } : null;
 // Öfen: Schlüssel "dimension:x,y,z" -> { slots: [Zutat, Brennstoff, Ergebnis], burn, burnMax, progress }
 const furnaces = new Map();
 for (const [key, slots, burn, burnMax, progress] of saved?.furnaces || []) {
@@ -4361,6 +4513,17 @@ function startSecondary() {
   if (target?.id === B.FURNACE || target?.id === B.FURNACE_LIT) { openInventory('furnace', furnaceAt(target.x, target.y, target.z)); return; }
   const held = heldItem();
   if (held && held.id === I.FLINT_AND_STEEL) { useFlintAndSteel(); return; }
+  // Rüstung in der Hand: mit Rechtsklick anziehen
+  const wear = held && ITEMS[held.id]?.armor;
+  if (wear) {
+    const old = armor[wear.slot];
+    armor[wear.slot] = held.n === Infinity ? { id: held.id, n: 1, d: 0 } : held;
+    if (held.n !== Infinity) inventory[selectedSlot] = old;
+    inventoryChanged();
+    renderArmorHud();
+    showName(itemName(held.id) + ' angezogen');
+    return;
+  }
   if (held && held.id === I.EYE_OF_ENDER) {
     if (target?.id === B.END_FRAME) insertEye(target.x, target.y, target.z);
     else showName('Setze das Enderauge in einen Endportalrahmen');
@@ -4456,6 +4619,17 @@ function fillSlot(el, stack) {
     g.style.webkitMaskImage = g.style.maskImage = `url(${iconURL(stack.id)})`;
     el.append(g);
   }
+  const maxDur = ITEMS[stack.id]?.dur;
+  if (maxDur && stack.d > 0) {
+    // Haltbarkeitsbalken von Grün nach Rot
+    const bar = document.createElement('div'), fill = document.createElement('div');
+    const left = Math.max(0, 1 - stack.d / maxDur);
+    bar.className = 'dur';
+    fill.style.width = left * 100 + '%';
+    fill.style.background = `hsl(${left * 120}, 90%, 45%)`;
+    bar.append(fill);
+    el.append(bar);
+  }
   if (stack.n !== Infinity && stack.n > 1) {
     const c = document.createElement('span');
     c.className = 'cnt';
@@ -4545,6 +4719,32 @@ function renderFood() {
   }
 }
 let lastAirShown = -1;
+// Rüstungsleiste (Brustpanzer-Symbole über den Herzen)
+const ARMOR_ICON = ['.XX...XX.', 'XLLX.XLMX', 'XLMMXMMMX', 'XMMMMMMMX', '.XMMMMMX.', '.XMMMMMX.', '.XMMMMMX.', '.XXXXXXX.'];
+function armorIcon(fill) {
+  const c = document.createElement('canvas'); c.width = 9; c.height = 8;
+  const ctx = c.getContext('2d');
+  ARMOR_ICON.forEach((row, y) => [...row].forEach((ch, x) => {
+    if (ch === '.') return;
+    const filled = fill === 2 || (fill === 1 && x <= 4);
+    ctx.fillStyle = ch === 'X' ? '#1e1e1e' : !filled ? '#4a4a4a' : ch === 'L' ? '#ffffff' : '#c8c8c8';
+    ctx.fillRect(x, y, 1, 1);
+  }));
+  return c.toDataURL();
+}
+const ARMOR_IMG = [armorIcon(0), armorIcon(1), armorIcon(2)];
+const armorHudEl = document.getElementById('armor');
+function renderArmorHud() {
+  const { points } = armorStats();
+  armorHudEl.innerHTML = '';
+  if (!points) return;
+  for (let i = 0; i < 10; i++) {
+    const img = new Image();
+    img.src = ARMOR_IMG[Math.max(0, Math.min(2, points - i * 2))];
+    armorHudEl.append(img);
+  }
+}
+
 function renderAir() {
   const n = player.air >= MAX_AIR ? 0 : Math.ceil(player.air / MAX_AIR * 10);
   if (n === lastAirShown) return;
@@ -4660,7 +4860,32 @@ function slotEl(arr, i, extra = '') {
   el.addEventListener('pointerenter', () => { if (arr[i]) invItemEl.textContent = itemName(arr[i].id); });
   return el;
 }
+const armorSlotsEl = document.getElementById('armor-slots');
+const ARMOR_LABELS = ['Kopf', 'Brust', 'Beine', 'Füße'];
+function clickArmor(i) {
+  if (cursor && ITEMS[cursor.id]?.armor?.slot !== i) { invItemEl.textContent = 'Das passt hier nicht hin'; return; }
+  if (cursor && cursor.n === Infinity) { armor[i] = { id: cursor.id, n: 1, d: 0 }; cursor = null; }
+  else [armor[i], cursor] = [cursor, armor[i]];
+  if (armor[i]) invItemEl.textContent = itemName(armor[i].id);
+  renderArmorHud();
+  afterSlotChange();
+}
+function renderArmorSlots() {
+  armorSlotsEl.innerHTML = '';
+  for (let i = 0; i < 4; i++) {
+    const el = document.createElement('div');
+    el.className = 'islot armor-slot';
+    el.dataset.label = ARMOR_LABELS[i];
+    fillSlot(el, armor[i]);
+    el.addEventListener('click', (e) => { moveCursor(e); clickArmor(i); });
+    el.addEventListener('pointerenter', () => { invItemEl.textContent = armor[i] ? itemName(armor[i].id) : ARMOR_LABELS[i] + ': hier Rüstung ablegen'; });
+    armorSlotsEl.append(el);
+  }
+  const { points } = armorStats();
+  armorSlotsEl.dataset.points = points;
+}
 function renderInventory() {
+  renderArmorSlots();
   invMainEl.innerHTML = '';
   invBarEl.innerHTML = '';
   for (let i = 9; i < INV_SIZE; i++) invMainEl.append(slotEl(inventory, i));
@@ -4918,6 +5143,7 @@ function setGameMode(mode) {
   renderHotbar();
   renderHealth();
   renderFood();
+  renderArmorHud();
 }
 modeBtn.addEventListener('click', () => { setGameMode(isSurvival() ? 'creative' : 'survival'); saveGame(); });
 canvas.addEventListener('click', () => { if (!IS_TOUCH && !locked) canvas.requestPointerLock(); });
@@ -5178,7 +5404,7 @@ preloadAround();
 spawnEndEntities();
 setGameMode(gameMode);
 // Zugriff für Tests/Entwicklung: index.html?debug
-if (new URLSearchParams(location.search).has('debug')) window.blockwelt = { mobs, Mob, player, get world() { return world; }, overworld, nether, end, endState, travelEnd, placeFire, fires, crystals, pearls, travel, fireballs, shootFireball, damagePlayer, inventory, addItem, drops, Drop, I, B, ITEMS, openInventory, closeInventory, primeTNT, meshChunk, BLOCK_ORDER, setGameMode, breakTime, canHarvest, get gameMode() { return gameMode; }, furnaces, RECIPES, craftGrid, matchRecipe, get target() { return target; } };
+if (new URLSearchParams(location.search).has('debug')) window.blockwelt = { mobs, Mob, player, get world() { return world; }, overworld, nether, end, endState, travelEnd, placeFire, fires, crystals, pearls, travel, fireballs, shootFireball, damagePlayer, inventory, addItem, drops, Drop, I, B, ITEMS, openInventory, closeInventory, primeTNT, meshChunk, BLOCK_ORDER, setGameMode, armor, armorStats, breakTime, canHarvest, get gameMode() { return gameMode; }, furnaces, RECIPES, craftGrid, matchRecipe, get target() { return target; } };
 player.fallPeak = player.pos[1];
 renderHealth();
 camera.position.set(player.pos[0], player.pos[1] + EYE, player.pos[2]);
