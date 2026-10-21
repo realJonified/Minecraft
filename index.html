@@ -45,6 +45,21 @@
   .islot.sel { box-shadow: inset 0 0 0 2px #fff; }
   #cursor { position: fixed; width: var(--slot); height: var(--slot); transform: translate(-50%, -50%); pointer-events: none; display: none; align-items: center; justify-content: center; }
   @media (max-height: 520px) { .inv-hint { display: none; } #inventory { --slot: min(48px, calc((100vw - 56px) / 9), calc((100dvh - 150px) / 8)); } }
+  .inv-title { font-weight: 700; font-size: 16px; color: #2a2a2a; }
+  #container { display: none; }
+  .cont-row { display: flex; align-items: center; justify-content: center; gap: 16px; padding: 4px 0 6px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, var(--slot)); gap: 2px; }
+  .islot.big { width: calc(var(--slot) * 1.35); height: calc(var(--slot) * 1.35); }
+  .arrow { width: 46px; height: 12px; background: #8b8b8b; position: relative; margin-right: 10px; }
+  .arrow::after { content: ''; position: absolute; right: -12px; top: -8px; border: 14px solid transparent; border-left: 12px solid #8b8b8b; border-right: 0; }
+  .arrow div { height: 100%; width: 0; background: #fff; }
+  .arrow.static div { width: 100%; background: #8b8b8b; }
+  .fur-col { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+  .flame { width: 18px; height: 22px; background: #8b8b8b; position: relative; clip-path: polygon(50% 0, 100% 55%, 85% 100%, 15% 100%, 0 55%); }
+  .flame div { position: absolute; left: 0; right: 0; bottom: 0; height: 0; background: linear-gradient(to top, #ff4a00, #ffd23a); }
+  #recipes { max-height: calc(var(--slot) * 2 + 4px); overflow-y: auto; touch-action: pan-y; }
+  #furnace-ui[style*="flex"] ~ #recipes-label, #furnace-ui[style*="flex"] ~ #recipes { display: none; }
+  #craft-ui[style*="flex"] ~ #furnace-hint { display: none; }
   .inv-hint { margin-top: 8px; font-size: 12px; color: #555; max-width: calc(var(--slot) * 9 + 16px); }
   #blockname { position: fixed; bottom: 112px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 18px; text-shadow: 2px 2px 0 #000; transition: opacity .4s; pointer-events: none; }
 
@@ -128,6 +143,7 @@
       <b>Linksklick</b><span>Block abbauen / Mob schlagen</span>
       <b>Rechtsklick</b><span>Block setzen / Essen (gedrückt halten)</span>
       <b>E</b><span>Auswahl &amp; Inventar</span>
+      <b>Rechtsklick</b><span>auf Werkbank / Ofen: öffnen</span>
       <b>Mittelklick</b><span>Block auswählen</span>
       <b>1–9 / Mausrad</b><span>Block wechseln</span>
       <b>F</b><span>Flugmodus an/aus</span>
@@ -158,6 +174,7 @@
 <div id="inventory">
   <div class="inv-panel">
     <div class="inv-head">
+      <span id="inv-title" class="inv-title"></span>
       <button class="inv-tab on" data-tab="blocks">Blöcke</button>
       <button class="inv-tab" data-tab="items">Items</button>
       <button class="inv-btn" id="inv-trash" title="Gegenstand in der Hand löschen">🗑</button>
@@ -165,6 +182,25 @@
     </div>
     <div id="inv-item"></div>
     <div id="palette" class="inv-grid"></div>
+    <div id="container">
+      <div id="craft-ui" class="cont-row">
+        <div id="craft-grid" class="grid3"></div>
+        <div class="arrow static"><div></div></div>
+        <div id="craft-out" class="islot big"></div>
+      </div>
+      <div id="furnace-ui" class="cont-row">
+        <div class="fur-col">
+          <div id="fur-in" class="islot" title="Zutat"></div>
+          <div id="fur-flame" class="flame"><div></div></div>
+          <div id="fur-fuel" class="islot" title="Brennstoff"></div>
+        </div>
+        <div id="fur-arrow" class="arrow"><div></div></div>
+        <div id="fur-out" class="islot big"></div>
+      </div>
+      <div id="furnace-hint" class="inv-label">Oben: Fleisch, Erz, Sand … · Unten: Kohle oder Holz</div>
+      <div id="recipes-label" class="inv-label">Rezepte (antippen zum Einlegen)</div>
+      <div id="recipes" class="inv-grid"></div>
+    </div>
     <div class="inv-label">Inventar</div>
     <div id="inv-main" class="inv-grid"></div>
     <div id="inv-hotbar" class="inv-grid"></div>
@@ -213,7 +249,7 @@ const WOOL_COLORS = [
 const TILE_NAMES = [
   'grass_top', 'grass_side', 'dirt', 'stone', 'cobble', 'sand', 'water', 'log_top', 'log_side', 'leaves', 'planks', 'glass', 'bedrock', 'snow', 'snow_side', 'brick',
   'coal_ore', 'iron_ore', 'gold_ore', 'diamond_ore', 'redstone_ore', 'emerald_ore', 'lapis_ore', 'gravel', 'sandstone_top', 'sandstone_side', 'sandstone_bottom', 'mossy_cobble', 'stone_bricks', 'obsidian', 'clay', 'ice',
-  'glowstone', 'birch_top', 'birch_side', 'birch_planks', 'birch_leaves', 'spruce_top', 'spruce_side', 'spruce_planks', 'spruce_leaves', 'bookshelf', 'crafting_top', 'crafting_side', 'crafting_front', 'furnace_top', 'furnace_side', 'furnace_front',
+  'glowstone', 'birch_top', 'birch_side', 'birch_planks', 'birch_leaves', 'spruce_top', 'spruce_side', 'spruce_planks', 'spruce_leaves', 'bookshelf', 'crafting_top', 'crafting_side', 'crafting_front', 'furnace_top', 'furnace_side', 'furnace_front', 'furnace_front_lit',
   'tnt_top', 'tnt_side', 'tnt_bottom', 'gold_block', 'iron_block', 'diamond_block', 'emerald_block', 'redstone_block', 'lapis_block', 'quartz', 'pumpkin_top', 'pumpkin_side', 'pumpkin_face', 'lantern_face', 'melon_top', 'melon_side',
   'hay_top', 'hay_side', 'cactus_top', 'cactus_side', 'cactus_bottom', 'granite', 'diorite', 'andesite',
   'netherrack', 'soul_sand', 'nether_quartz_ore', 'nether_gold_ore', 'nether_bricks', 'magma', 'lava',
@@ -306,6 +342,7 @@ def(75, 'MAGMA', 'Magmablock', ['magma'], { glow: true });
 def(76, 'LAVA', 'Lava', ['lava'], { solid: false, opaque: false, glow: true });
 def(77, 'PORTAL_X', 'Netherportal', ['obsidian'], { solid: false, opaque: false });
 def(78, 'PORTAL_Z', 'Netherportal', ['obsidian'], { solid: false, opaque: false });
+def(79, 'FURNACE_LIT', 'Ofen', ['furnace_top', 'furnace_side', 'furnace_top', 'furnace_front_lit'], { glow: true });
 const FLUID = new Uint8Array(256);
 FLUID[B.WATER] = FLUID[B.LAVA] = 1;
 const isPortal = (id) => id === B.PORTAL_X || id === B.PORTAL_Z;
@@ -349,11 +386,26 @@ item(117, 'DIAMOND', 'Diamant');
 item(118, 'FLINT_AND_STEEL', 'Feuerzeug');
 item(119, 'GOLD_NUGGET', 'Goldklumpen');
 item(120, 'GHAST_TEAR', 'Ghastträne');
+item(121, 'STICK', 'Stock');
+item(122, 'COAL', 'Kohle');
+item(123, 'CHARCOAL', 'Holzkohle');
+item(124, 'REDSTONE', 'Redstone-Staub');
+item(125, 'LAPIS', 'Lapislazuli');
+item(126, 'EMERALD', 'Smaragd');
+item(127, 'QUARTZ', 'Netherquarz');
+item(128, 'FLINT', 'Feuerstein');
+// Schwerter: damage = Schaden pro Schlag (mit der Hand: 4)
+item(129, 'WOODEN_SWORD', 'Holzschwert', { damage: 5, stack: 1 });
+item(130, 'STONE_SWORD', 'Steinschwert', { damage: 6, stack: 1 });
+item(131, 'IRON_SWORD', 'Eisenschwert', { damage: 7, stack: 1 });
+item(132, 'GOLDEN_SWORD', 'Goldschwert', { damage: 5, stack: 1 });
+item(133, 'DIAMOND_SWORD', 'Diamantschwert', { damage: 8, stack: 1 });
 for (const it of Object.values(ITEMS)) it.food = it.heal !== undefined;
 const ITEM_ORDER = Object.keys(ITEMS).map(Number);
 
 const isBlock = (id) => id > 0 && id < 100 && !!BLOCKS[id];
 const itemExists = (id) => isBlock(id) || !!ITEMS[id];
+const maxStack = (id) => ITEMS[id]?.stack ?? 64;
 const itemName = (id) => isBlock(id) ? BLOCKS[id].name : ITEMS[id]?.name ?? '';
 
 const HOTBAR_DEFAULT = [B.GRASS, B.DIRT, B.STONE, B.COBBLE, B.PLANKS, B.LOG, B.GLASS, B.BRICK, B.SAND];
@@ -671,6 +723,14 @@ function makeAtlas() {
     const panel = (x, y) => x === 0 || y === 0 ? '#9a9a9a' : x === 15 || y === 15 ? '#5a5a5a' : sm(x, y);
     tile('furnace_top', panel);
     tile('furnace_side', (x, y) => y === 7 ? '#666666' : panel(x, y));
+    tile('furnace_front_lit', (x, y) => {
+      if (x >= 4 && x <= 11 && y >= 8 && y <= 13) {
+        if (x === 4 || x === 11 || y === 8) return '#3a3a3a';
+        return pick(['#ff5a00', '#ff8a1e', '#ffc23a', '#ffe680'], (y - 9) / 5 * 0.6 + rnd() * 0.4);
+      }
+      if (x >= 4 && x <= 11 && y >= 3 && y <= 5) return y === 3 ? '#5a5a5a' : '#454545';
+      return panel(x, y);
+    });
     tile('furnace_front', (x, y) => {
       if (x >= 4 && x <= 11 && y >= 8 && y <= 13) return (x === 4 || x === 11 || y === 8) ? '#3a3a3a' : y === 13 ? '#2b2b2b' : '#151515';
       if (x >= 4 && x <= 11 && y >= 3 && y <= 5) return y === 3 ? '#5a5a5a' : '#454545';
@@ -834,6 +894,15 @@ const ITEM_ART = {
   nugget: [
     '................', '................', '................', '................', '................', '................', '......yy........', '.....yYYy..yy...',
     '....yYwYYyyYYy..', '....yYYYYyYYYy..', '.....yyyy.yyy...', '................', '................', '................', '................', '................'],
+  sword: [
+    '................', '............ooo.', '...........obbo.', '..........obbdo.', '.........obbdo..', '........obbdo...', '.......obbdo....', '..o...obbdo.....',
+    '..ohoobbdo......', '...ohhbdo.......', '....ohho........', '...osoohho......', '..oso..oo.......', '.oso............', '.oo.............', '................'],
+  stick: [
+    '................', '................', '................', '............oo..', '...........oso..', '..........oso...', '.........oso....', '........oso.....',
+    '.......oso......', '......oso.......', '.....oso........', '....oso.........', '...oso..........', '...oo...........', '................', '................'],
+  lump: [
+    '................', '................', '................', '.....oooo.......', '...oohhccoo.....', '..ohhccccccoo...', '..ohccccccccco..', '.occccdcccccco..',
+    '.occcccccccdco..', '.occdcccccccco..', '..occcccccdco...', '...ooccccccoo...', '.....oooooo.....', '................', '................', '................'],
   tear: [
     '................', '................', '.......o........', '......owo.......', '......owo.......', '.....owwco......', '.....owwco......', '....owwwcco.....',
     '....owwwcco.....', '....owwccco.....', '.....occco......', '......ooo.......', '................', '................', '................', '................'],
@@ -863,6 +932,19 @@ const ITEM_LOOK = {
   FLINT_AND_STEEL: ['flint', { h: '#c8c8c8', f: '#2e2e2e', F: '#5e5e5e' }],
   GOLD_NUGGET: ['nugget', { y: '#c99a1a', Y: '#f5d04a', w: '#fff3a0' }],
   GHAST_TEAR: ['tear', { w: '#eaffff', c: '#9fd9e0', o: '#5a8a90' }],
+  STICK: ['stick', { o: '#3a2a14', s: '#8a6234' }],
+  COAL: ['lump', { o: '#0e0e0e', h: '#5a5a5a', c: '#2a2a2a', d: '#161616' }],
+  CHARCOAL: ['lump', { o: '#1a120c', h: '#6a5a4a', c: '#3a2e24', d: '#241a12' }],
+  REDSTONE: ['powder', { g: '#d01010', G: '#8a0000', d: '#5a0000' }],
+  LAPIS: ['gem', { h: '#c8d8ff', w: '#3a62d8', c: '#22409a', o: '#122266' }],
+  EMERALD: ['gem', { h: '#d8ffe6', w: '#2fd469', c: '#14a048', o: '#0a5a28' }],
+  QUARTZ: ['gem', { h: '#ffffff', w: '#ece6dc', c: '#cfc5b5', o: '#7a7266' }],
+  FLINT: ['lump', { o: '#1a1a1a', h: '#8a8a8a', c: '#4a4a4a', d: '#303030' }],
+  WOODEN_SWORD: ['sword', { o: '#2a2a2a', b: '#b08a52', d: '#6b5230', h: '#5a4020', s: '#6b4a26' }],
+  STONE_SWORD: ['sword', { o: '#2a2a2a', b: '#a0a0a0', d: '#6a6a6a', h: '#5a4020', s: '#6b4a26' }],
+  IRON_SWORD: ['sword', { o: '#2a2a2a', b: '#ffffff', d: '#c0c0c0', h: '#5a4020', s: '#6b4a26' }],
+  GOLDEN_SWORD: ['sword', { o: '#2a2a2a', b: '#fff27a', d: '#e8b520', h: '#5a4020', s: '#6b4a26' }],
+  DIAMOND_SWORD: ['sword', { o: '#2a2a2a', b: '#8cf8f0', d: '#2bc7ac', h: '#5a4020', s: '#6b4a26' }],
 };
 function makeItemCanvas(id) {
   const [art, pal] = ITEM_LOOK[ITEMS[id].key];
@@ -1503,6 +1585,7 @@ function saveGame() {
       peaceful,
       slot: selectedSlot,
       inventory: inventory.map(st => st ? [st.id, st.n === Infinity ? -1 : st.n] : null),
+      furnaces: [...furnaces.values()].map(f => [f.key, f.slots.map(serStack), f.burn, f.burnMax, f.progress]),
     }));
   } catch (e) { console.warn('Speichern fehlgeschlagen', e); }
 }
@@ -2880,7 +2963,7 @@ function useFlintAndSteel() {
 //  Interaktion
 // ============================================================
 // Inventar: Plätze 0–8 sind die Leiste, 9–35 der Rucksack. n = Infinity für Blöcke aus der Auswahl
-const INV_SIZE = 36, STACK = 64;
+const INV_SIZE = 36;
 const inventory = new Array(INV_SIZE).fill(null);
 if (Array.isArray(saved?.inventory)) {
   saved.inventory.forEach((s, i) => { if (s && i < INV_SIZE && itemExists(s[0])) inventory[i] = { id: s[0], n: s[1] < 0 ? Infinity : s[1] }; });
@@ -2897,10 +2980,10 @@ let attackCd = 0;
 function addItem(id, n) {
   if (inventory.some(s => s && s.id === id && s.n === Infinity)) return 0;
   for (const s of inventory) {
-    if (n > 0 && s && s.id === id && s.n < STACK) { const k = Math.min(n, STACK - s.n); s.n += k; n -= k; }
+    if (n > 0 && s && s.id === id && s.n < maxStack(id)) { const k = Math.min(n, maxStack(id) - s.n); s.n += k; n -= k; }
   }
   for (let i = 0; i < INV_SIZE && n > 0; i++) {
-    if (!inventory[i]) { const k = Math.min(n, STACK); inventory[i] = { id, n: k }; n -= k; }
+    if (!inventory[i]) { const k = Math.min(n, maxStack(id)); inventory[i] = { id, n: k }; n -= k; }
   }
   inventoryChanged();
   return n;
@@ -2928,7 +3011,7 @@ function primaryAction() {
   if (targetMob) {
     if (attackCd > 0) return;
     attackCd = 0.35;
-    targetMob.hurt(4, player.pos[0], player.pos[2], 7, true);
+    targetMob.hurt(ITEMS[heldItem()?.id]?.damage ?? 4, player.pos[0], player.pos[2], 7, true);
     return;
   }
   breakBlock();
@@ -2947,7 +3030,161 @@ function breakBlock() {
   if (id === B.TNT) primeTNT(x, y, z, 3);
   else if (id === B.OBSIDIAN) for (const [dx, dy, dz] of SIX) breakPortalAt(x + dx, y + dy, z + dz);
   else if (id === B.LEAVES && Math.random() < 0.08) drops.push(new Drop(I.APPLE, 1, x + 0.5, y + 0.3, z + 0.5));
+  if (id === B.FURNACE || id === B.FURNACE_LIT) removeFurnace(x, y, z);
+  const drop = blockDrop(id);
+  if (drop) drops.push(new Drop(drop[0], drop[1], x + 0.5, y + 0.3, z + 0.5));
   scheduleSave();
+}
+
+// Was ein abgebauter Block fallen lässt (Standard: sich selbst)
+const BLOCK_DROPS = {
+  [B.GRASS]: B.DIRT, [B.SNOW]: B.DIRT, [B.STONE]: B.COBBLE, [B.FURNACE_LIT]: B.FURNACE,
+  [B.COAL_ORE]: I.COAL, [B.DIAMOND_ORE]: I.DIAMOND, [B.EMERALD_ORE]: I.EMERALD, [B.NETHER_QUARTZ_ORE]: I.QUARTZ,
+  [B.REDSTONE_ORE]: [I.REDSTONE, 4], [B.LAPIS_ORE]: [I.LAPIS, 5], [B.NETHER_GOLD_ORE]: [I.GOLD_NUGGET, 3],
+};
+const NO_DROP = new Set([B.WATER, B.LAVA, B.BEDROCK, B.GLASS, B.ICE, B.LEAVES, B.BIRCH_LEAVES, B.SPRUCE_LEAVES, B.PORTAL_X, B.PORTAL_Z, B.TNT]);
+function blockDrop(id) {
+  if (NO_DROP.has(id)) return null;
+  if (id === B.GRAVEL && Math.random() < 0.1) return [I.FLINT, 1];
+  const d = BLOCK_DROPS[id] ?? id;
+  return Array.isArray(d) ? d : [d, 1];
+}
+
+// ---------- Rezepte für die Werkbank ----------
+const ANY_PLANKS = [B.PLANKS, B.BIRCH_PLANKS, B.SPRUCE_PLANKS];
+const ANY_LOG = [B.LOG, B.BIRCH_LOG, B.SPRUCE_LOG];
+const RECIPES = [
+  { shapeless: [[B.LOG]], out: [B.PLANKS, 4] },
+  { shapeless: [[B.BIRCH_LOG]], out: [B.BIRCH_PLANKS, 4] },
+  { shapeless: [[B.SPRUCE_LOG]], out: [B.SPRUCE_PLANKS, 4] },
+  { shape: ['#', '#'], key: { '#': ANY_PLANKS }, out: [I.STICK, 4] },
+  { shape: ['##', '##'], key: { '#': ANY_PLANKS }, out: [B.CRAFTING, 1] },
+  { shape: ['###', '# #', '###'], key: { '#': [B.COBBLE] }, out: [B.FURNACE, 1] },
+  { shape: ['M', 'M', 'S'], key: { M: ANY_PLANKS, S: [I.STICK] }, out: [I.WOODEN_SWORD, 1] },
+  { shape: ['M', 'M', 'S'], key: { M: [B.COBBLE], S: [I.STICK] }, out: [I.STONE_SWORD, 1] },
+  { shape: ['M', 'M', 'S'], key: { M: [I.IRON_INGOT], S: [I.STICK] }, out: [I.IRON_SWORD, 1] },
+  { shape: ['M', 'M', 'S'], key: { M: [I.GOLD_INGOT], S: [I.STICK] }, out: [I.GOLDEN_SWORD, 1] },
+  { shape: ['M', 'M', 'S'], key: { M: [I.DIAMOND], S: [I.STICK] }, out: [I.DIAMOND_SWORD, 1] },
+  { shape: ['GGG', 'GAG', 'GGG'], key: { G: [I.GOLD_INGOT], A: [I.APPLE] }, out: [I.GOLDEN_APPLE, 1] },
+  { shape: ['GGG', 'GAG', 'GGG'], key: { G: [B.GOLD_BLOCK], A: [I.APPLE] }, out: [I.ENCHANTED_GOLDEN_APPLE, 1] },
+  { shape: ['GSG', 'SGS', 'GSG'], key: { G: [I.GUNPOWDER], S: [B.SAND] }, out: [B.TNT, 1] },
+  { shapeless: [[I.IRON_INGOT], [I.FLINT]], out: [I.FLINT_AND_STEEL, 1] },
+  { shape: ['##', '##'], key: { '#': [B.STONE] }, out: [B.STONE_BRICKS, 4] },
+  { shape: ['##', '##'], key: { '#': [B.SAND] }, out: [B.SANDSTONE, 1] },
+  { shape: ['##', '##'], key: { '#': [I.QUARTZ] }, out: [B.QUARTZ, 1] },
+  { shapeless: [[B.PUMPKIN], [B.GLOWSTONE]], out: [B.JACK_O_LANTERN, 1] },
+  ...[[I.GOLD_INGOT, B.GOLD_BLOCK], [I.IRON_INGOT, B.IRON_BLOCK], [I.DIAMOND, B.DIAMOND_BLOCK], [I.EMERALD, B.EMERALD_BLOCK],
+      [I.REDSTONE, B.REDSTONE_BLOCK], [I.LAPIS, B.LAPIS_BLOCK], [I.GOLD_NUGGET, I.GOLD_INGOT]].flatMap(([small, big]) => [
+    { shape: ['###', '###', '###'], key: { '#': [small] }, out: [big, 1] },
+    { shapeless: [[big]], out: [small, 9] },
+  ]),
+];
+
+// Prüft, welches Rezept im 3×3-Feld liegt (Form darf verschoben und gespiegelt sein)
+function matchRecipe(grid) {
+  const ids = grid.map(st => st ? st.id : 0);
+  const filled = [];
+  ids.forEach((id, i) => { if (id) filled.push(i); });
+  if (!filled.length) return null;
+  const rows = filled.map(i => Math.floor(i / 3)), cols = filled.map(i => i % 3);
+  const r0 = Math.min(...rows), c0 = Math.min(...cols);
+  const h = Math.max(...rows) - r0 + 1, w = Math.max(...cols) - c0 + 1;
+  for (const r of RECIPES) {
+    if (r.shapeless) {
+      if (r.shapeless.length !== filled.length) continue;
+      const rest = filled.map(i => ids[i]);
+      if (r.shapeless.every(opts => { const k = rest.findIndex(id => opts.includes(id)); if (k < 0) return false; rest.splice(k, 1); return true; })) return r;
+      continue;
+    }
+    if (r.shape.length !== h || r.shape[0].length !== w) continue;
+    for (const mirror of [false, true]) {
+      let ok = true;
+      for (let rr = 0; rr < h && ok; rr++) for (let cc = 0; cc < w && ok; cc++) {
+        const ch = r.shape[rr][mirror ? w - 1 - cc : cc], id = ids[(r0 + rr) * 3 + c0 + cc];
+        ok = ch === ' ' ? !id : r.key[ch].includes(id);
+      }
+      if (ok) return r;
+    }
+  }
+  return null;
+}
+// Zellen eines Rezepts (für das automatische Befüllen aus dem Rezeptbuch)
+function recipeCells(r) {
+  if (r.shapeless) return r.shapeless.map((opts, i) => ({ index: i, opts }));
+  const cells = [];
+  r.shape.forEach((row, rr) => [...row].forEach((ch, cc) => { if (ch !== ' ') cells.push({ index: rr * 3 + cc, opts: r.key[ch] }); }));
+  return cells;
+}
+
+// ---------- Ofen: Schmelzen und Braten ----------
+const SMELT_TIME = 5;   // Sekunden pro Gegenstand
+const SMELT = {
+  [I.PORKCHOP]: I.COOKED_PORKCHOP, [I.BEEF]: I.STEAK, [I.MUTTON]: I.COOKED_MUTTON, [I.CHICKEN]: I.COOKED_CHICKEN,
+  [B.IRON_ORE]: I.IRON_INGOT, [B.GOLD_ORE]: I.GOLD_INGOT, [B.NETHER_GOLD_ORE]: I.GOLD_INGOT,
+  [B.DIAMOND_ORE]: I.DIAMOND, [B.EMERALD_ORE]: I.EMERALD, [B.COAL_ORE]: I.COAL, [B.REDSTONE_ORE]: I.REDSTONE,
+  [B.LAPIS_ORE]: I.LAPIS, [B.NETHER_QUARTZ_ORE]: I.QUARTZ,
+  [B.SAND]: B.GLASS, [B.COBBLE]: B.STONE, [B.CLAY]: B.BRICK, [B.NETHERRACK]: B.NETHER_BRICKS,
+  [B.LOG]: I.CHARCOAL, [B.BIRCH_LOG]: I.CHARCOAL, [B.SPRUCE_LOG]: I.CHARCOAL,
+};
+// Brenndauer in Sekunden (eine Kohle reicht für 8 Gegenstände)
+const FUEL = {
+  [I.COAL]: 40, [I.CHARCOAL]: 40, [I.STICK]: 2.5, [B.CRAFTING]: 7.5, [B.BOOKSHELF]: 7.5, [I.WOODEN_SWORD]: 5,
+  ...Object.fromEntries([...ANY_PLANKS, ...ANY_LOG].map(id => [id, 7.5])),
+};
+const serStack = (st) => st ? [st.id, st.n === Infinity ? -1 : st.n] : null;
+const deStack = (a) => a && itemExists(a[0]) ? { id: a[0], n: a[1] < 0 ? Infinity : a[1] } : null;
+// Öfen: Schlüssel "dimension:x,y,z" -> { slots: [Zutat, Brennstoff, Ergebnis], burn, burnMax, progress }
+const furnaces = new Map();
+for (const [key, slots, burn, burnMax, progress] of saved?.furnaces || []) {
+  furnaces.set(key, { key, slots: slots.map(deStack), burn, burnMax, progress });
+}
+const furnaceKey = (x, y, z) => `${world.dim}:${x},${y},${z}`;
+function furnaceAt(x, y, z) {
+  const key = furnaceKey(x, y, z);
+  if (!furnaces.has(key)) furnaces.set(key, { key, slots: [null, null, null], burn: 0, burnMax: 0, progress: 0 });
+  return furnaces.get(key);
+}
+function removeFurnace(x, y, z) {
+  const f = furnaces.get(furnaceKey(x, y, z));
+  if (!f) return;
+  if (openFurnace === f) closeInventory();
+  for (const st of f.slots) if (st && st.n !== Infinity) drops.push(new Drop(st.id, st.n, x + 0.5, y + 0.5, z + 0.5));
+  furnaces.delete(f.key);
+}
+function updateFurnaces(dt) {
+  const prefix = world.dim + ':';
+  for (const f of furnaces.values()) {
+    if (!f.key.startsWith(prefix)) continue;
+    const [x, y, z] = f.key.slice(prefix.length).split(',').map(Number);
+    if (!world.getChunk(x >> 4, z >> 4)?.meshed) continue;
+    const block = world.getBlock(x, y, z);
+    if (block !== B.FURNACE && block !== B.FURNACE_LIT) { furnaces.delete(f.key); continue; }
+    const [input, fuel, out] = f.slots;
+    const result = input && SMELT[input.id];
+    const canSmelt = !!result && (!out || (out.id === result && out.n < maxStack(result)));
+    let changed = false;
+    if (f.burn <= 0 && canSmelt && fuel && FUEL[fuel.id]) {
+      f.burn = f.burnMax = FUEL[fuel.id];
+      if (fuel.n !== Infinity && --fuel.n <= 0) f.slots[1] = null;
+      changed = true;
+    }
+    if (f.burn > 0) {
+      f.burn -= dt;
+      if (canSmelt) {
+        f.progress += dt;
+        if (f.progress >= SMELT_TIME) {
+          f.progress = 0;
+          if (input.n !== Infinity && --input.n <= 0) f.slots[0] = null;
+          if (out) out.n++; else f.slots[2] = { id: result, n: 1 };
+          changed = true;
+        }
+      } else f.progress = 0;
+    } else f.progress = Math.max(0, f.progress - dt * 2);
+    // Ofen leuchtet, solange er brennt
+    const lit = f.burn > 0 ? B.FURNACE_LIT : B.FURNACE;
+    if (block !== lit) { world.setBlock(x, y, z, lit); remeshAround(x, z); }
+    if (invOpen && openFurnace === f) { if (changed) renderContainer(); updateFurnaceBars(); }
+  }
 }
 
 function placeBlock() {
@@ -2981,6 +3218,9 @@ function canEat(id) {
   return !!it?.food && (it.always || player.hp < MAX_HP);
 }
 function startSecondary() {
+  updateTarget();
+  if (target?.id === B.CRAFTING) { openInventory('crafting'); return; }
+  if (target?.id === B.FURNACE || target?.id === B.FURNACE_LIT) { openInventory('furnace', furnaceAt(target.x, target.y, target.z)); return; }
   const held = heldItem();
   if (held && held.id === I.FLINT_AND_STEEL) { useFlintAndSteel(); return; }
   if (held && ITEMS[held.id]?.food) {
@@ -3144,6 +3384,18 @@ const invBarEl = document.getElementById('inv-hotbar');
 const cursorEl = document.getElementById('cursor');
 const invItemEl = document.getElementById('inv-item');
 let invOpen = false, invTab = 'blocks', cursor = null;
+let invMode = 'inventory';                  // 'inventory' | 'crafting' | 'furnace'
+let openFurnace = null;
+const craftGrid = new Array(9).fill(null);
+let craftRecipe = null;
+const containerEl = document.getElementById('container');
+const invTitleEl = document.getElementById('inv-title');
+const craftGridEl = document.getElementById('craft-grid');
+const craftOutEl = document.getElementById('craft-out');
+const recipesEl = document.getElementById('recipes');
+const furInEl = document.getElementById('fur-in');
+const furFuelEl = document.getElementById('fur-fuel');
+const furOutEl = document.getElementById('fur-out');
 
 function renderPalette() {
   paletteEl.innerHTML = '';
@@ -3167,35 +3419,161 @@ function renderPalette() {
   }
   document.querySelectorAll('.inv-tab').forEach(t => t.classList.toggle('on', t.dataset.tab === invTab));
 }
-function clickSlot(i) {
-  const s = inventory[i];
-  if (!cursor) { if (s) { cursor = s; inventory[i] = null; } }
-  else if (!s) { inventory[i] = cursor; cursor = null; }
-  else if (s.id === cursor.id && (s.n === Infinity || cursor.n === Infinity)) { inventory[i] = { id: s.id, n: Infinity }; cursor = null; }
-  else if (s.id === cursor.id) {
-    const k = Math.min(cursor.n, STACK - s.n);
-    s.n += k; cursor.n -= k;
+// Klick auf einen Platz: aufnehmen, ablegen, zusammenlegen oder tauschen
+function clickStack(arr, i) {
+  const st = arr[i];
+  if (!cursor) { if (st) { cursor = st; arr[i] = null; } }
+  else if (!st) { arr[i] = cursor; cursor = null; }
+  else if (st.id === cursor.id && (st.n === Infinity || cursor.n === Infinity)) { arr[i] = { id: st.id, n: Infinity }; cursor = null; }
+  else if (st.id === cursor.id) {
+    const k = Math.min(cursor.n, maxStack(st.id) - st.n);
+    st.n += k; cursor.n -= k;
     if (cursor.n <= 0) cursor = null;
-  } else { inventory[i] = cursor; cursor = s; }
-  const shown = inventory[i] || cursor;
+  } else { arr[i] = cursor; cursor = st; }
+  const shown = arr[i] || cursor;
   invItemEl.textContent = shown ? itemName(shown.id) : '';
+  afterSlotChange();
+}
+// Rechtsklick: einzelnes Item ablegen bzw. halben Stapel nehmen
+function rightClickStack(arr, i) {
+  const st = arr[i];
+  if (!cursor) {
+    if (!st) return;
+    if (st.n === Infinity) cursor = { id: st.id, n: Infinity };
+    else { const k = Math.ceil(st.n / 2); cursor = { id: st.id, n: k }; st.n -= k; if (st.n <= 0) arr[i] = null; }
+  } else if (!st || (st.id === cursor.id && st.n !== Infinity && st.n < maxStack(st.id))) {
+    if (st) st.n++; else arr[i] = { id: cursor.id, n: cursor.n === Infinity ? Infinity : 1 };
+    if (cursor.n !== Infinity && --cursor.n <= 0) cursor = null;
+  } else return clickStack(arr, i);
+  afterSlotChange();
+}
+function afterSlotChange() {
+  if (invMode === 'crafting') craftRecipe = matchRecipe(craftGrid);
   renderInventory();
+  renderContainer();
   renderHotbar();
   renderCursor();
   scheduleSave();
 }
+function slotEl(arr, i, extra = '') {
+  const el = document.createElement('div');
+  el.className = 'islot' + extra;
+  fillSlot(el, arr[i]);
+  el.addEventListener('click', (e) => { moveCursor(e); clickStack(arr, i); });
+  el.addEventListener('contextmenu', (e) => { e.preventDefault(); moveCursor(e); rightClickStack(arr, i); });
+  el.addEventListener('pointerenter', () => { if (arr[i]) invItemEl.textContent = itemName(arr[i].id); });
+  return el;
+}
 function renderInventory() {
-  for (const [el, from, to] of [[invMainEl, 9, INV_SIZE], [invBarEl, 0, 9]]) {
-    el.innerHTML = '';
-    for (let i = from; i < to; i++) {
-      const slot = document.createElement('div');
-      slot.className = 'islot' + (i === selectedSlot ? ' sel' : '');
-      fillSlot(slot, inventory[i]);
-      slot.addEventListener('click', (e) => { moveCursor(e); clickSlot(i); });
-      slot.addEventListener('pointerenter', () => { if (inventory[i]) invItemEl.textContent = itemName(inventory[i].id); });
-      el.append(slot);
-    }
+  invMainEl.innerHTML = '';
+  invBarEl.innerHTML = '';
+  for (let i = 9; i < INV_SIZE; i++) invMainEl.append(slotEl(inventory, i));
+  for (let i = 0; i < 9; i++) invBarEl.append(slotEl(inventory, i, i === selectedSlot ? ' sel' : ''));
+}
+
+// ---------- Werkbank & Ofen ----------
+function renderContainer() {
+  if (invMode === 'crafting') {
+    craftGridEl.innerHTML = '';
+    for (let i = 0; i < 9; i++) craftGridEl.append(slotEl(craftGrid, i));
+    fillSlot(craftOutEl, craftRecipe ? { id: craftRecipe.out[0], n: craftRecipe.out[1] } : null);
+  } else if (invMode === 'furnace' && openFurnace) {
+    const [input, fuel, out] = openFurnace.slots;
+    fillSlot(furInEl, input);
+    fillSlot(furFuelEl, fuel);
+    fillSlot(furOutEl, out);
+    updateFurnaceBars();
   }
+}
+function updateFurnaceBars() {
+  const f = openFurnace;
+  document.querySelector('#fur-flame div').style.height = (f.burn > 0 ? Math.min(100, f.burn / f.burnMax * 100) : 0) + '%';
+  document.querySelector('#fur-arrow div').style.width = Math.min(100, f.progress / SMELT_TIME * 100) + '%';
+}
+// Ergebnis aus der Werkbank nehmen: verbraucht je eine Zutat pro Feld
+craftOutEl.addEventListener('click', (e) => {
+  moveCursor(e);
+  if (!craftRecipe) return;
+  const [id, n] = craftRecipe.out;
+  if (cursor && (cursor.id !== id || cursor.n === Infinity || cursor.n + n > maxStack(id))) return;
+  for (let i = 0; i < 9; i++) {
+    const st = craftGrid[i];
+    if (st && st.n !== Infinity && --st.n <= 0) craftGrid[i] = null;
+  }
+  cursor = cursor ? { id, n: cursor.n + n } : { id, n };
+  invItemEl.textContent = itemName(id);
+  afterSlotChange();
+});
+craftOutEl.addEventListener('pointerenter', () => { if (craftRecipe) invItemEl.textContent = itemName(craftRecipe.out[0]); });
+// Ofen: oben Zutat, unten Brennstoff, rechts Ergebnis (nur herausnehmen)
+furInEl.addEventListener('click', (e) => { moveCursor(e); clickStack(openFurnace.slots, 0); });
+furFuelEl.addEventListener('click', (e) => { moveCursor(e); clickStack(openFurnace.slots, 1); });
+furInEl.addEventListener('contextmenu', (e) => { e.preventDefault(); rightClickStack(openFurnace.slots, 0); });
+furFuelEl.addEventListener('contextmenu', (e) => { e.preventDefault(); rightClickStack(openFurnace.slots, 1); });
+furOutEl.addEventListener('click', (e) => {
+  moveCursor(e);
+  const out = openFurnace.slots[2];
+  if (!out) return;
+  if (!cursor) { cursor = out; openFurnace.slots[2] = null; }
+  else if (cursor.id === out.id && cursor.n !== Infinity) {
+    const k = Math.min(out.n, maxStack(out.id) - cursor.n);
+    cursor.n += k; out.n -= k;
+    if (out.n <= 0) openFurnace.slots[2] = null;
+  }
+  invItemEl.textContent = itemName(cursor?.id ?? out.id);
+  afterSlotChange();
+});
+
+// Rezeptbuch: antippen legt die Zutaten aus dem Inventar in die Werkbank
+function renderRecipes() {
+  recipesEl.innerHTML = '';
+  const seen = new Set();
+  for (const r of RECIPES) {
+    if (seen.has(r.out[0])) continue;
+    seen.add(r.out[0]);
+    const el = document.createElement('div');
+    el.className = 'islot';
+    el.title = itemName(r.out[0]);
+    fillSlot(el, { id: r.out[0], n: r.out[1] });
+    el.addEventListener('click', () => autofill(r));
+    el.addEventListener('pointerenter', () => { invItemEl.textContent = itemName(r.out[0]); });
+    recipesEl.append(el);
+  }
+}
+function returnGrid() {
+  for (let i = 0; i < 9; i++) {
+    const st = craftGrid[i];
+    craftGrid[i] = null;
+    if (!st || st.n === Infinity) continue;
+    const left = addItem(st.id, st.n);
+    if (left) drops.push(new Drop(st.id, left, player.pos[0], player.pos[1] + 1.2, player.pos[2]));
+  }
+}
+function autofill(r) {
+  // passende Variante suchen, für die alle Zutaten im Inventar sind
+  const variants = RECIPES.filter(v => v.out[0] === r.out[0]);
+  returnGrid();
+  let missing = null;
+  for (const v of variants) {
+    const temp = inventory.map(st => st && { ...st });
+    const plan = [];
+    missing = null;
+    for (const c of recipeCells(v)) {
+      const slot = temp.findIndex(st => st && c.opts.includes(st.id) && st.n > 0);
+      if (slot < 0) { missing = c.opts[0]; break; }
+      plan.push([c.index, temp[slot].id, slot]);
+      if (temp[slot].n !== Infinity) temp[slot].n--;
+    }
+    if (missing) continue;
+    for (const [gi, id, slot] of plan) {
+      const st = inventory[slot];
+      craftGrid[gi] = { id, n: st.n === Infinity ? Infinity : 1 };
+      if (st.n !== Infinity && --st.n <= 0) inventory[slot] = null;
+    }
+    break;
+  }
+  invItemEl.textContent = missing ? `${itemName(r.out[0])}: Dir fehlt ${itemName(missing)}` : itemName(r.out[0]);
+  afterSlotChange();
 }
 function renderCursor() {
   fillSlot(cursorEl, cursor);
@@ -3210,13 +3588,24 @@ document.querySelectorAll('.inv-tab').forEach(t => t.addEventListener('click', (
 document.getElementById('inv-trash').addEventListener('click', () => { cursor = null; renderCursor(); });
 document.getElementById('inv-close').addEventListener('click', () => closeInventory());
 
-function openInventory() {
+function openInventory(mode = 'inventory', furnace = null) {
   if (invOpen || player.dead) return;
   invOpen = true;
+  invMode = typeof mode === 'string' ? mode : 'inventory';
+  openFurnace = furnace;
   resetInput();
   invEl.style.display = 'flex';
   invItemEl.textContent = '';
-  renderPalette();
+  const plain = invMode === 'inventory';
+  document.querySelectorAll('.inv-tab').forEach(t => { t.style.display = plain ? '' : 'none'; });
+  paletteEl.style.display = plain ? '' : 'none';
+  containerEl.style.display = plain ? 'none' : 'block';
+  document.getElementById('craft-ui').style.display = invMode === 'crafting' ? 'flex' : 'none';
+  document.getElementById('furnace-ui').style.display = invMode === 'furnace' ? 'flex' : 'none';
+  invTitleEl.textContent = { crafting: '🛠️ Werkbank', furnace: '🔥 Ofen' }[invMode] || '';
+  if (plain) renderPalette();
+  if (invMode === 'crafting') { renderRecipes(); craftRecipe = matchRecipe(craftGrid); }
+  renderContainer();
   renderInventory();
   renderCursor();
   if (locked) document.exitPointerLock();
@@ -3224,6 +3613,9 @@ function openInventory() {
 function closeInventory() {
   if (!invOpen) return;
   invOpen = false;
+  if (invMode === 'crafting') returnGrid();
+  invMode = 'inventory';
+  openFurnace = null;
   // Gegenstand in der Hand zurücklegen (oder fallen lassen, wenn kein Platz ist)
   if (cursor && cursor.n !== Infinity) {
     const left = addItem(cursor.id, cursor.n);
@@ -3534,7 +3926,7 @@ function preloadAround() {
 }
 preloadAround();
 // Zugriff für Tests/Entwicklung: index.html?debug
-if (new URLSearchParams(location.search).has('debug')) window.blockwelt = { mobs, Mob, player, get world() { return world; }, overworld, nether, travel, fireballs, shootFireball, damagePlayer, inventory, addItem, drops, Drop, I, B, ITEMS, openInventory, closeInventory, primeTNT, meshChunk, BLOCK_ORDER };
+if (new URLSearchParams(location.search).has('debug')) window.blockwelt = { mobs, Mob, player, get world() { return world; }, overworld, nether, travel, fireballs, shootFireball, damagePlayer, inventory, addItem, drops, Drop, I, B, ITEMS, openInventory, closeInventory, primeTNT, meshChunk, BLOCK_ORDER, furnaces, RECIPES, craftGrid, matchRecipe, get target() { return target; } };
 player.fallPeak = player.pos[1];
 renderHealth();
 camera.position.set(player.pos[0], player.pos[1] + EYE, player.pos[2]);
@@ -3559,6 +3951,7 @@ renderer.setAnimationLoop(() => {
     updateEating(dt);
   } else camera.rotation.set(player.pitch, player.yaw, 0);
   updateFx(dt);
+  if (!player.dead && (isActive() || invOpen)) updateFurnaces(dt);
   portalAnim += dt;
   if (portalAnim > 0.08) { portalAnim = 0; drawPortal(performance.now() / 1000); }
   attackCd = Math.max(0, attackCd - dt);

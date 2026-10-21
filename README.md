@@ -23,6 +23,10 @@ python3 -m http.server
 - Auswahl & Inventar (Taste E bzw. 🎒): jeden Block und jedes Item aus der Auswahl nehmen und in Leiste/Rucksack legen
 - Tiere droppen Beute (Fleisch, Leder, Wolle, Federn), Zombies verrottetes Fleisch, Creeper Schwarzpulver – einfach drüberlaufen zum Einsammeln
 - Essen heilt (Rechtsklick bzw. 🧱 gedrückt halten). Goldener Apfel und der OP **Verzauberte Goldene Apfel** wie im echten Minecraft: Regeneration II, Absorption IV (goldene Herzen), Resistenz und Feuerresistenz
+- **Werkbank** (Rechtsklick drauf): 3×3-Crafting mit Rezeptbuch – ein Tipp auf ein Rezept legt die Zutaten automatisch ein. Bretter, Stöcke, Werkbank, Ofen, Schwerter (Holz bis Diamant), Goldene Äpfel, TNT, Feuerzeug, Erzblöcke und mehr
+- **Ofen** (Rechtsklick drauf): oben Zutat, unten Brennstoff (Kohle, Holzkohle, Holz). Brät Fleisch, schmilzt Erze zu Barren, Sand zu Glas, Bruchstein zu Stein, Holz zu Holzkohle … Der Ofen leuchtet, solange er brennt, und arbeitet auch weiter, wenn das Fenster zu ist
+- Abgebaute Blöcke lassen etwas fallen (Stein → Bruchstein, Kohleerz → Kohle, Diamanterz → Diamant, Kies → manchmal Feuerstein …)
+- Schwerter machen mehr Schaden (Holz 5, Stein 6, Eisen 7, Diamant 8)
 - TNT: abbauen zündet es, Explosionen lösen Kettenreaktionen aus (Obsidian ist sprengsicher)
 - **Der Nether**: Rahmen aus Obsidian bauen (mind. 4×5), mit dem Feuerzeug anzünden, 2 Sekunden reinstellen. Dort warten Netherrack-Höhlen, ein riesiger Lavasee, Seelensand, Magmablöcke, Leuchtstein-Trauben, Netherquarz- und Nethergolderz. Ein Block im Nether entspricht 8 Blöcken in der Oberwelt; auf der anderen Seite wird automatisch ein Portal gebaut
 - Nether-Mobs: Zombifizierte Piglins (friedlich, bis man einen schlägt – dann greift die ganze Gruppe an) und Ghasts, die Feuerbälle schießen. Feuerbälle kann man mit einem Schlag zurückschleudern!
