@@ -55,6 +55,9 @@
   #hurt { position: fixed; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, rgba(200,0,0,0) 35%, rgba(200,0,0,.6)); }
   #death { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(110,0,0,.55); }
   #death h1 { color: #ff5a5a; text-shadow: 3px 3px 0 #3a0000; }
+  #fire { position: fixed; left: 0; right: 0; bottom: 0; height: 45%; pointer-events: none; display: none; background: linear-gradient(to top, rgba(255,120,0,.75), rgba(255,60,0,.25) 50%, rgba(255,60,0,0)); animation: flicker .25s infinite alternate; }
+  @keyframes flicker { from { opacity: .7; } to { opacity: 1; } }
+  #portalfx { position: fixed; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, rgba(160,70,255,.3), rgba(100,20,190,.95)); }
   #underwater { position: fixed; inset: 0; background: rgba(20, 60, 160, .35); pointer-events: none; display: none; }
 
   #overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,.55); }
@@ -65,6 +68,7 @@
   .panel button:hover { background: #7c8fc0; }
   .controls { margin-top: 18px; text-align: left; font-size: 14px; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; color: #ccc; }
   .controls b { color: #fff; font-family: monospace; font-size: 13px; }
+  .nether-help { margin: 14px 0 0; font-size: 13px; color: #e8b0a0; text-align: left; line-height: 1.5; }
   .touch-help { display: none; margin-top: 18px; text-align: left; font-size: 14px; color: #ccc; line-height: 1.6; }
 
   /* Touch-Steuerung (Handy & Tablet) */
@@ -98,6 +102,8 @@
 <body>
 <div id="game"></div>
 <div id="underwater"></div>
+<div id="fire"></div>
+<div id="portalfx"></div>
 <div id="crosshair"></div>
 <div id="blockname"></div>
 <div id="health"></div>
@@ -128,6 +134,7 @@
       <b>F3</b><span>Debug-Infos</span>
       <b>Esc</b><span>Pause</span>
     </div>
+    <p class="nether-help">🔥 <b>Nether:</b> Baue einen Rahmen aus Obsidian (mind. 4 breit, 5 hoch), zünde ihn mit dem Feuerzeug (Auswahl → Items) an und stell dich 2 Sekunden hinein.</p>
     <div class="touch-help">
       🕹 Joystick links: laufen (ganz nach vorne = sprinten)<br>
       👆 Wischen auf dem Bildschirm: umsehen<br>
@@ -186,6 +193,7 @@ import * as THREE from 'three';
 const CHUNK = 16;
 const HEIGHT = 96;
 const WATER_LEVEL = 30;
+const NETHER_LAVA = 31;          // Lavasee-Höhe im Nether
 // Handy/Tablet erkennen (mit ?touch in der URL erzwingbar)
 const IS_TOUCH = matchMedia('(pointer: coarse)').matches || new URLSearchParams(location.search).has('touch');
 const RENDER_DIST = IS_TOUCH ? 4 : 6;   // in Chunks
@@ -208,6 +216,7 @@ const TILE_NAMES = [
   'glowstone', 'birch_top', 'birch_side', 'birch_planks', 'birch_leaves', 'spruce_top', 'spruce_side', 'spruce_planks', 'spruce_leaves', 'bookshelf', 'crafting_top', 'crafting_side', 'crafting_front', 'furnace_top', 'furnace_side', 'furnace_front',
   'tnt_top', 'tnt_side', 'tnt_bottom', 'gold_block', 'iron_block', 'diamond_block', 'emerald_block', 'redstone_block', 'lapis_block', 'quartz', 'pumpkin_top', 'pumpkin_side', 'pumpkin_face', 'lantern_face', 'melon_top', 'melon_side',
   'hay_top', 'hay_side', 'cactus_top', 'cactus_side', 'cactus_bottom', 'granite', 'diorite', 'andesite',
+  'netherrack', 'soul_sand', 'nether_quartz_ore', 'nether_gold_ore', 'nether_bricks', 'magma', 'lava',
   ...WOOL_COLORS.map(w => 'wool_' + w[0]),
 ];
 const T = Object.fromEntries(TILE_NAMES.map((n, i) => [n, i]));
@@ -288,6 +297,18 @@ def(51, 'GRANITE', 'Granit', ['granite']);
 def(52, 'DIORITE', 'Diorit', ['diorite']);
 def(53, 'ANDESITE', 'Andesit', ['andesite']);
 WOOL_COLORS.forEach(([key, adj], i) => def(54 + i, 'WOOL_' + key.toUpperCase(), adj + ' Wolle', ['wool_' + key]));
+def(70, 'NETHERRACK', 'Netherrack', ['netherrack']);
+def(71, 'SOUL_SAND', 'Seelensand', ['soul_sand']);
+def(72, 'NETHER_QUARTZ_ORE', 'Netherquarzerz', ['nether_quartz_ore']);
+def(73, 'NETHER_GOLD_ORE', 'Nethergolderz', ['nether_gold_ore']);
+def(74, 'NETHER_BRICKS', 'Netherziegel', ['nether_bricks']);
+def(75, 'MAGMA', 'Magmablock', ['magma'], { glow: true });
+def(76, 'LAVA', 'Lava', ['lava'], { solid: false, opaque: false, glow: true });
+def(77, 'PORTAL_X', 'Netherportal', ['obsidian'], { solid: false, opaque: false });
+def(78, 'PORTAL_Z', 'Netherportal', ['obsidian'], { solid: false, opaque: false });
+const FLUID = new Uint8Array(256);
+FLUID[B.WATER] = FLUID[B.LAVA] = 1;
+const isPortal = (id) => id === B.PORTAL_X || id === B.PORTAL_Z;
 
 // Reihenfolge in der Auswahl
 const BLOCK_ORDER = [
@@ -298,6 +319,7 @@ const BLOCK_ORDER = [
   B.GOLD_BLOCK, B.IRON_BLOCK, B.REDSTONE_BLOCK, B.LAPIS_BLOCK, B.DIAMOND_BLOCK, B.EMERALD_BLOCK, B.QUARTZ,
   B.BRICK, B.GLASS, B.GLOWSTONE, B.BOOKSHELF, B.CRAFTING, B.FURNACE, B.TNT,
   B.PUMPKIN, B.JACK_O_LANTERN, B.MELON, B.HAY, B.CACTUS,
+  B.NETHERRACK, B.SOUL_SAND, B.NETHER_QUARTZ_ORE, B.NETHER_GOLD_ORE, B.NETHER_BRICKS, B.MAGMA, B.LAVA,
   ...WOOL_COLORS.map((_, i) => 54 + i),
 ];
 
@@ -324,6 +346,9 @@ item(114, 'GUNPOWDER', 'Schwarzpulver');
 item(115, 'IRON_INGOT', 'Eisenbarren');
 item(116, 'GOLD_INGOT', 'Goldbarren');
 item(117, 'DIAMOND', 'Diamant');
+item(118, 'FLINT_AND_STEEL', 'Feuerzeug');
+item(119, 'GOLD_NUGGET', 'Goldklumpen');
+item(120, 'GHAST_TEAR', 'Ghastträne');
 for (const it of Object.values(ITEMS)) it.food = it.heal !== undefined;
 const ITEM_ORDER = Object.keys(ITEMS).map(Number);
 
@@ -563,9 +588,9 @@ function makeAtlas() {
   tile('andesite', noisy(['#6e6e6e', '#7a7a7a', '#848484', '#8c8c8c', '#9a9a9a'], 10, 0.75));
 
   // ---- Erze ----
-  const ore = (name, [main, dark, light]) => {
+  const ore = (name, [main, dark, light], base = stone, clusters = 5) => {
     const pix = new Map();
-    for (let k = 0; k < 5; k++) {
+    for (let k = 0; k < clusters; k++) {
       const cx = 1 + ri(13), cy = 1 + ri(13);
       const shape = [[0, 0], [1, 0], [0, 1], [1, 1], [-1, 0], [0, -1], [2, 1], [1, 2]].slice(0, 3 + ri(5));
       for (const [dx, dy] of shape) {
@@ -573,7 +598,7 @@ function makeAtlas() {
         pix.set(x + ',' + y, dx + dy <= 0 ? light : dx + dy >= 2 ? dark : main);
       }
     }
-    tile(name, (x, y) => pix.get(x + ',' + y) ?? stone(x, y));
+    tile(name, (x, y) => pix.get(x + ',' + y) ?? base(x, y));
   };
   ore('coal_ore', ['#2b2b2b', '#151515', '#454545']);
   ore('iron_ore', ['#d8af93', '#a8876f', '#ecd0b8']);
@@ -713,6 +738,36 @@ function makeAtlas() {
     tile('cactus_top', (x, y) => (x === 0 || y === 0 || x === 15 || y === 15) ? '#1a4a10' : (x === 7 || x === 8 || y === 7 || y === 8) ? '#4c9a30' : g(x, y));
     tile('cactus_bottom', (x, y) => mul(hex(g(x, y)), 0.75));
   }
+  // ---- Nether ----
+  const netherrack = (() => { const n = noisy(['#3f0f0f', '#4f1414', '#5e1a1a', '#6e2020', '#7a2626'], 7, 0.6); return (x, y) => rnd() < 0.05 ? '#8f3d3d' : n(x, y); })();
+  tile('netherrack', netherrack);
+  {
+    const n = noisy(['#2e2018', '#3d2a20', '#4a3326', '#55402f'], 6, 0.5);
+    const faces = [[2, 3], [9, 2], [5, 10], [11, 11]];   // kleine Seelen-Gesichter
+    tile('soul_sand', (x, y) => {
+      for (const [fx, fy] of faces) if ((y === fy && (x === fx || x === fx + 2)) || (y === fy + 2 && x >= fx && x <= fx + 2)) return '#1a110c';
+      return n(x, y);
+    });
+  }
+  ore('nether_quartz_ore', ['#e8e2d6', '#bdb3a2', '#ffffff'], netherrack, 6);
+  ore('nether_gold_ore', ['#f5d04a', '#c99a1a', '#fff3a0'], netherrack, 7);
+  tile('nether_bricks', (x, y) => {
+    const row = Math.floor(y / 4), bx = (x + (row % 2) * 4) % 8;
+    if (y % 4 === 3 || bx === 7) return '#160809';
+    return mul(hex(pick(['#2c1418', '#371a1e', '#43202a'], rnd())), y % 4 === 0 ? 1.25 : 1);
+  });
+  {
+    const v = voronoi(9);
+    tile('magma', (x, y) => {
+      const c = v(x, y);
+      if (c.edge < 0.9) return c.edge < 0.45 ? '#ffc23a' : '#ff7a14';
+      return pick(['#4a1606', '#5a1e0a', '#6e2a0e'], c.cell[2] * 0.7 + rnd() * 0.3);
+    });
+  }
+  {
+    const n1 = vnoise(4), n2 = vnoise(8);
+    tile('lava', (x, y) => pick(['#b8380a', '#cf4a0a', '#e35d0e', '#f07a14', '#fb9a26', '#ffc04a'], n1(x, y) * 0.6 + n2(x, y) * 0.3 + rnd() * 0.1));
+  }
   // ---- Wolle: gewebtes Muster ----
   WOOL_COLORS.forEach(([key, , color]) => {
     const n = vnoise(4), c = hex(color);
@@ -773,6 +828,15 @@ const ITEM_ART = {
   ingot: [
     '................', '................', '................', '................', '................', '......hhhhhh....', '.....hwwwwwwo...', '....hwwwwwwwoo..',
     '...hhhhhhhhhooo.', '...ommmmmmmmooo.', '...ommmmmmmmoo..', '...ooooooooooo..', '................', '................', '................', '................'],
+  flint: [
+    '................', '..........hhh...', '.........h...h..', '........h.....h.', '........h.....h.', '.........h...h..', '..........hhh...', '................',
+    '....fff.........', '...fFFff........', '..fFFFFff.......', '..fFFFFFf.......', '...ffFFf........', '....fff.........', '................', '................'],
+  nugget: [
+    '................', '................', '................', '................', '................', '................', '......yy........', '.....yYYy..yy...',
+    '....yYwYYyyYYy..', '....yYYYYyYYYy..', '.....yyyy.yyy...', '................', '................', '................', '................', '................'],
+  tear: [
+    '................', '................', '.......o........', '......owo.......', '......owo.......', '.....owwco......', '.....owwco......', '....owwwcco.....',
+    '....owwwcco.....', '....owwccco.....', '.....occco......', '......ooo.......', '................', '................', '................', '................'],
   gem: [
     '................', '................', '................', '.....oooooo.....', '....ohhwwwwo....', '...ohwwwwwwwo...', '..oooooooooooo..', '...owwccwwcwo...',
     '....owcwwcwo....', '.....owwcwo.....', '......owco......', '.......oo.......', '................', '................', '................', '................'],
@@ -796,6 +860,9 @@ const ITEM_LOOK = {
   IRON_INGOT: ['ingot', { h: '#ffffff', w: '#d8d8d8', m: '#bdbdbd', o: '#7a7a7a' }],
   GOLD_INGOT: ['ingot', { h: '#fffcd0', w: '#fbe251', m: '#e8b520', o: '#9a6f0a' }],
   DIAMOND: ['gem', { h: '#ffffff', w: '#5decf5', c: '#2bc7ac', o: '#0e6b6b' }],
+  FLINT_AND_STEEL: ['flint', { h: '#c8c8c8', f: '#2e2e2e', F: '#5e5e5e' }],
+  GOLD_NUGGET: ['nugget', { y: '#c99a1a', Y: '#f5d04a', w: '#fff3a0' }],
+  GHAST_TEAR: ['tear', { w: '#eaffff', c: '#9fd9e0', o: '#5a8a90' }],
 };
 function makeItemCanvas(id) {
   const [art, pal] = ITEM_LOOK[ITEMS[id].key];
@@ -917,8 +984,9 @@ class Chunk {
 }
 
 class World {
-  constructor(seed, mods) {
+  constructor(seed, mods, dim = 'overworld') {
     this.seed = seed;
+    this.dim = dim;
     this.noise = new Simplex(seed);
     this.chunks = new Map();
     // Änderungen der Spieler: chunkKey -> Map(lokalerIndex -> blockId)
@@ -971,6 +1039,7 @@ class World {
   }
 
   generate(chunk) {
+    if (this.dim === 'nether') return this.generateNether(chunk);
     const d = chunk.data, n = this.noise;
     const ox = chunk.cx * CHUNK, oz = chunk.cz * CHUNK;
     const S2 = CHUNK * CHUNK;
@@ -999,7 +1068,7 @@ class World {
         else if (y === h) id = beach ? shore : snowy ? B.SNOW : B.GRASS;
         else id = B.WATER;
         // Höhlen
-        if (id !== B.WATER && y > 1 && y <= caveTop && n.noise3(wx / 22, y / 14, wz / 22) > 0.55) id = B.AIR;
+        if (id !== B.WATER && y > 1 && y <= caveTop && n.noise3(wx / 22, y / 14, wz / 22) > 0.55) id = y <= 8 ? B.LAVA : B.AIR;
         d[idx(x, y, z)] = id;
       }
     }
@@ -1081,6 +1150,85 @@ class World {
     if (mods) for (const [i, id] of mods) d[i] = id;
   }
 
+  // Nether: Höhlenwelt aus Netherrack mit Lavasee, Decke aus Grundgestein und Leuchtstein-Trauben
+  generateNether(chunk) {
+    const d = chunk.data, n = this.noise;
+    const ox = chunk.cx * CHUNK, oz = chunk.cz * CHUNK;
+    const S2 = CHUNK * CHUNK;
+    const idx = (x, y, z) => x + z * CHUNK + y * S2;
+    // Dichte im 4er-Raster berechnen und dazwischen interpolieren (spart viel Rechenzeit)
+    const G = 4, NX = CHUNK / G + 1, NY = HEIGHT / G + 1;
+    const dens = new Float32Array(NX * NX * NY);
+    for (let gy = 0; gy < NY; gy++) for (let gz = 0; gz < NX; gz++) for (let gx = 0; gx < NX; gx++) {
+      const wx = ox + gx * G, wy = gy * G, wz = oz + gz * G;
+      let v = n.noise3(wx / 48, wy / 28, wz / 48) + 0.5 * n.noise3(wx / 18 + 100, wy / 12, wz / 18);
+      if (wy < 24) v += (24 - wy) / 24 * 1.3;                          // Boden
+      if (wy > HEIGHT - 26) v += (wy - (HEIGHT - 26)) / 26 * 1.3;      // Decke
+      dens[(gy * NX + gz) * NX + gx] = v;
+    }
+    const D = (gx, gy, gz) => dens[(gy * NX + gz) * NX + gx];
+    for (let y = 0; y < HEIGHT; y++) {
+      const gy = Math.min(NY - 2, Math.floor(y / G)), fy = (y - gy * G) / G;
+      for (let z = 0; z < CHUNK; z++) {
+        const gz = Math.floor(z / G), fz = (z - gz * G) / G;
+        for (let x = 0; x < CHUNK; x++) {
+          const gx = Math.floor(x / G), fx = (x - gx * G) / G;
+          const c00 = D(gx, gy, gz) * (1 - fx) + D(gx + 1, gy, gz) * fx;
+          const c10 = D(gx, gy + 1, gz) * (1 - fx) + D(gx + 1, gy + 1, gz) * fx;
+          const c01 = D(gx, gy, gz + 1) * (1 - fx) + D(gx + 1, gy, gz + 1) * fx;
+          const c11 = D(gx, gy + 1, gz + 1) * (1 - fx) + D(gx + 1, gy + 1, gz + 1) * fx;
+          const v = (c00 * (1 - fy) + c10 * fy) * (1 - fz) + (c01 * (1 - fy) + c11 * fy) * fz;
+          d[idx(x, y, z)] = v > 0.15 ? B.NETHERRACK : y <= NETHER_LAVA ? B.LAVA : B.AIR;
+        }
+      }
+    }
+
+    const rnd = mulberry32((chunk.cx * 83492791) ^ (chunk.cz * 2971215073) ^ this.seed);
+    const ri = (k) => Math.floor(rnd() * k);
+    for (let z = 0; z < CHUNK; z++) for (let x = 0; x < CHUNK; x++) {
+      // Grundgestein unten und oben, leicht zerklüftet
+      d[idx(x, 0, z)] = d[idx(x, HEIGHT - 1, z)] = B.BEDROCK;
+      for (let k = 1; k <= 3; k++) {
+        if (rnd() < (4 - k) * 0.22) d[idx(x, k, z)] = B.BEDROCK;
+        if (rnd() < (4 - k) * 0.22) d[idx(x, HEIGHT - 1 - k, z)] = B.BEDROCK;
+      }
+      // Seelensand, Kies und Magma an den Lavaufern
+      const sv = n.noise2((ox + x) / 20, (oz + z) / 20);
+      for (let y = NETHER_LAVA - 3; y <= NETHER_LAVA + 4; y++) {
+        const i = idx(x, y, z), above = d[idx(x, y + 1, z)];
+        if (d[i] !== B.NETHERRACK || (above !== B.AIR && above !== B.LAVA)) continue;
+        if (sv > 0.3) { d[i] = B.SOUL_SAND; if (d[idx(x, y - 1, z)] === B.NETHERRACK) d[idx(x, y - 1, z)] = B.SOUL_SAND; }
+        else if (sv < -0.55) d[i] = B.GRAVEL;
+        else if (above === B.LAVA && rnd() < 0.25) d[i] = B.MAGMA;
+      }
+    }
+    // Erzadern im Netherrack
+    for (const [id, tries, size] of [[B.NETHER_QUARTZ_ORE, 14, 9], [B.NETHER_GOLD_ORE, 8, 6]]) for (let t = 0; t < tries; t++) {
+      let x = ri(16), y = 5 + ri(HEIGHT - 10), z = ri(16);
+      for (let k = 0; k < size; k++) {
+        if (x >= 0 && x < 16 && z >= 0 && z < 16 && d[idx(x, y, z)] === B.NETHERRACK) d[idx(x, y, z)] = id;
+        const axis = ri(3), dir = rnd() < 0.5 ? -1 : 1;
+        if (axis === 0) x += dir; else if (axis === 1) y += dir; else z += dir;
+      }
+    }
+    // Leuchtstein-Trauben, die von der Decke hängen
+    for (let t = 0; t < 2; t++) {
+      let x = 2 + ri(12), z = 2 + ri(12), y = -1;
+      for (let yy = HEIGHT - 5; yy > 50; yy--) if (d[idx(x, yy, z)] === B.NETHERRACK && d[idx(x, yy - 1, z)] === B.AIR) { y = yy - 1; break; }
+      if (y < 0) continue;
+      for (let k = 0; k < 45; k++) {
+        if (d[idx(x, y, z)] === B.AIR) d[idx(x, y, z)] = B.GLOWSTONE;
+        if (rnd() < 0.55) y--;
+        x = Math.max(0, Math.min(15, x + ri(3) - 1));
+        z = Math.max(0, Math.min(15, z + ri(3) - 1));
+        if (y < 40) break;
+      }
+    }
+
+    const mods = this.mods.get(chunkKey(chunk.cx, chunk.cz));
+    if (mods) for (const [i, id] of mods) d[i] = id;
+  }
+
   serializeMods() {
     const out = {};
     for (const [k, m] of this.mods) out[k] = [...m];
@@ -1123,6 +1271,8 @@ function buildChunkGeometry(world, cx, cz) {
     nb.push(world.getChunk(cx + dx, cz + dz)?.data);
   }
   const data = nb[4];
+  // Weltkoordinaten direkt in die Geometrie schreiben, damit an Chunkgrenzen keine Haarrisse entstehen
+  const wx0 = cx * CHUNK, wz0 = cz * CHUNK;
   const get = (x, y, z) => {
     if (y < 0) return B.BEDROCK;
     if (y >= HEIGHT) return B.AIR;
@@ -1136,16 +1286,33 @@ function buildChunkGeometry(world, cx, cz) {
   const solid = { pos: [], uv: [], col: [], idx: [] };
   const water = { pos: [], uv: [], col: [], idx: [] };
   const glowBuf = { pos: [], uv: [], col: [], idx: [] };
+  const portal = { pos: [], uv: [], col: [], idx: [] };
   const ao = [0, 0, 0, 0];
 
   for (let y = 0; y < HEIGHT; y++) for (let z = 0; z < CHUNK; z++) for (let x = 0; x < CHUNK; x++) {
     const id = data[x + z * CHUNK + y * CHUNK * CHUNK];
     if (id === B.AIR) continue;
+    // Netherportal: dünne, leuchtende Fläche in der Blockmitte
+    if (isPortal(id)) {
+      const ax = id === B.PORTAL_X ? 2 : 0;
+      for (const f of id === B.PORTAL_X ? [4, 5] : [0, 1]) {
+        const base = portal.pos.length / 3;
+        for (const c of FACES[f].c) {
+          const q = [c[0], c[1], c[2]];
+          q[ax] = q[ax] ? 0.5625 : 0.4375;
+          portal.pos.push(wx0 + x + q[0], y + q[1], wz0 + z + q[2]);
+          portal.uv.push(c[3], c[4]);
+          portal.col.push(1, 1, 1);
+        }
+        portal.idx.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
+      }
+      continue;
+    }
     const isWater = id === B.WATER;
     const glow = GLOW[id] === 1;
     const out = isWater ? water : glow ? glowBuf : solid;
     const tiles = BLOCKS[id].tiles;
-    const waterLowered = isWater && get(x, y + 1, z) !== B.WATER;
+    const waterLowered = FLUID[id] === 1 && get(x, y + 1, z) !== id;
 
     for (let f = 0; f < 6; f++) {
       const face = FACES[f];
@@ -1159,7 +1326,7 @@ function buildChunkGeometry(world, cx, cz) {
       for (let k = 0; k < 4; k++) {
         const c = face.c[k];
         const vy = (waterLowered && c[1] === 1) ? 0.875 : c[1];
-        out.pos.push(x + c[0], y + vy, z + c[2]);
+        out.pos.push(wx0 + x + c[0], y + vy, wz0 + z + c[2]);
         const [u, v] = tileUV(tile, c[3], c[4]);
         out.uv.push(u, v);
 
@@ -1184,7 +1351,7 @@ function buildChunkGeometry(world, cx, cz) {
       else out.idx.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
     }
   }
-  return { solid, water, glow: glowBuf };
+  return { solid, water, glow: glowBuf, portal };
 }
 
 // ============================================================
@@ -1219,6 +1386,30 @@ const solidMat = new THREE.MeshBasicMaterial({ map: atlas, vertexColors: true, a
 const waterMat = new THREE.MeshBasicMaterial({ map: atlas, vertexColors: true, transparent: true, opacity: 0.72, depthWrite: false, side: THREE.DoubleSide });
 // Leuchtende Blöcke werden nachts nicht abgedunkelt
 const glowMat = new THREE.MeshBasicMaterial({ map: atlas, vertexColors: true, alphaTest: 0.5 });
+
+// Netherportal mit eigener, wirbelnder Textur
+const portalCanvas = document.createElement('canvas');
+portalCanvas.width = portalCanvas.height = 16;
+const portalCtx = portalCanvas.getContext('2d');
+const portalImg = portalCtx.createImageData(16, 16);
+const portalTex = new THREE.CanvasTexture(portalCanvas);
+portalTex.magFilter = THREE.NearestFilter; portalTex.minFilter = THREE.NearestFilter;
+portalTex.generateMipmaps = false; portalTex.colorSpace = THREE.SRGBColorSpace;
+const portalMat = new THREE.MeshBasicMaterial({ map: portalTex, transparent: true, opacity: 0.85, depthWrite: false, side: THREE.DoubleSide });
+function drawPortal(t) {
+  for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+    const dx = x - 7.5, dy = y - 7.5, r = Math.hypot(dx, dy), a = Math.atan2(dy, dx);
+    const v = Math.sin(a * 3 + r * 0.9 - t * 4) * 0.5 + 0.5;
+    const w = Math.sin(x * 0.9 + t * 2.3) * Math.cos(y * 0.7 - t * 1.7) * 0.25;
+    const k = Math.max(0, Math.min(1, v * 0.75 + w + 0.15));
+    const i = (y * 16 + x) * 4;
+    portalImg.data[i] = 70 + k * 130; portalImg.data[i + 1] = 10 + k * 70; portalImg.data[i + 2] = 140 + k * 115; portalImg.data[i + 3] = 210;
+  }
+  portalCtx.putImageData(portalImg, 0, 0);
+  portalTex.needsUpdate = true;
+}
+drawPortal(0);
+let portalAnim = 0;
 
 // Block-Markierung
 const highlight = new THREE.LineSegments(
@@ -1294,14 +1485,18 @@ function loadSave() {
 }
 const saved = loadSave();
 const seed = saved?.seed ?? Math.floor(Math.random() * 2147483647);
-const world = new World(seed, saved?.mods);
+const overworld = new World(seed, saved?.mods, 'overworld');
+const nether = new World((seed ^ 0x2545f491) >>> 0, saved?.netherMods, 'nether');
+let world = saved?.dim === 'nether' ? nether : overworld;
 
 let saveTimer = null;
 function saveGame() {
   try {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
       seed,
-      mods: world.serializeMods(),
+      mods: overworld.serializeMods(),
+      netherMods: nether.serializeMods(),
+      dim: world.dim,
       player: { x: player.pos[0], y: player.pos[1], z: player.pos[2], yaw: player.yaw, pitch: player.pitch, flying: player.flying },
       time: dayTime,
       hp: player.hp,
@@ -1320,10 +1515,10 @@ function scheduleSave() {
 //  Chunk-Verwaltung
 // ============================================================
 function disposeChunkMeshes(c) {
-  for (const m of [c.mesh, c.waterMesh, c.glowMesh]) {
+  for (const m of [c.mesh, c.waterMesh, c.glowMesh, c.portalMesh]) {
     if (m) { scene.remove(m); m.geometry.dispose(); }
   }
-  c.mesh = c.waterMesh = c.glowMesh = null;
+  c.mesh = c.waterMesh = c.glowMesh = c.portalMesh = null;
 }
 
 function makeMesh(buf, material, cx, cz) {
@@ -1335,7 +1530,6 @@ function makeMesh(buf, material, cx, cz) {
   g.setIndex(buf.idx);
   g.computeBoundingSphere();
   const m = new THREE.Mesh(g, material);
-  m.position.set(cx * CHUNK, 0, cz * CHUNK);
   m.matrixAutoUpdate = false;
   m.updateMatrix();
   scene.add(m);
@@ -1346,10 +1540,12 @@ function meshChunk(cx, cz) {
   for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) world.ensureChunk(cx + dx, cz + dz);
   const c = world.getChunk(cx, cz);
   disposeChunkMeshes(c);
-  const { solid, water, glow } = buildChunkGeometry(world, cx, cz);
+  const { solid, water, glow, portal } = buildChunkGeometry(world, cx, cz);
   c.mesh = makeMesh(solid, solidMat, cx, cz);
   c.waterMesh = makeMesh(water, waterMat, cx, cz);
   c.glowMesh = makeMesh(glow, glowMat, cx, cz);
+  c.portalMesh = makeMesh(portal, portalMat, cx, cz);
+  if (c.portalMesh) c.portalMesh.renderOrder = 2;
   if (c.waterMesh) c.waterMesh.renderOrder = 1;
   c.meshed = true;
 }
@@ -1420,6 +1616,12 @@ const player = {
   effects: {},     // aktive Effekte, z. B. { regeneration: { level, time } }
   absorb: 0,       // goldene Extra-Herzen
   regenTick: 0,
+  inLava: false,
+  fire: 0,         // Sekunden, die man noch brennt
+  fireTick: 0,
+  magmaTick: 0,
+  portalTimer: 0,
+  portalCooldown: false,
 };
 
 function findSpawn() {
@@ -1456,7 +1658,9 @@ function updatePlayer(dt) {
   player.regenTimer += dt;
   if (player.hp < MAX_HP && player.regenTimer > 4) { player.hp++; player.regenTimer -= 1.5; renderHealth(); }
   const feet = world.getBlock(Math.floor(p[0]), Math.floor(p[1] + 0.4), Math.floor(p[2]));
-  player.inWater = feet === B.WATER;
+  player.inWater = FLUID[feet] === 1;
+  player.inLava = feet === B.LAVA || world.getBlock(Math.floor(p[0]), Math.floor(p[1] + 1.2), Math.floor(p[2])) === B.LAVA;
+  const below = world.getBlock(Math.floor(p[0]), Math.floor(p[1] - 0.05), Math.floor(p[2]));
 
   // gewünschte Richtung (Tastatur + Touch-Joystick)
   let fx = joy.x, fz = joy.y;
@@ -1474,7 +1678,8 @@ function updatePlayer(dt) {
 
   const sprinting = !player.flying && ((keys.ShiftLeft && keys.KeyW) || (joy.y < -0.75 && Math.hypot(joy.x, joy.y) > 0.95));
   let speed = player.flying ? FLY : sprinting ? SPRINT : WALK;
-  if (player.inWater && !player.flying) speed *= 0.55;
+  if (player.inWater && !player.flying) speed *= player.inLava ? 0.35 : 0.55;
+  if (below === B.SOUL_SAND && player.onGround && !player.flying) speed *= 0.45;
 
   const accel = player.flying || player.onGround ? 18 : player.inWater ? 6 : 5;
   const blend = 1 - Math.exp(-accel * dt);
@@ -1527,6 +1732,7 @@ function updatePlayer(dt) {
     if (SOLID[world.getBlock(Math.floor(ahead[0]), Math.floor(p[1]), Math.floor(ahead[2]))]) v[1] = Math.max(v[1], 5);
   }
   if (p[1] < -20) { p[1] = HEIGHT; v[1] = 0; }
+  updateHazards(dt, below);
 
   camera.position.set(p[0], p[1] + EYE, p[2]);
   camera.rotation.set(player.pitch, player.yaw, 0);
@@ -1552,7 +1758,7 @@ function raycast(origin, dir, maxDist) {
   let nx = 0, ny = 0, nz = 0, t = 0;
   while (t <= maxDist) {
     const id = world.getBlock(x, y, z);
-    if (id !== B.AIR && id !== B.WATER) return { x, y, z, nx, ny, nz, id, t };
+    if (id !== B.AIR && !FLUID[id] && !isPortal(id)) return { x, y, z, nx, ny, nz, id, t };
     if (tmx < tmy && tmx < tmz) { x += sx; t = tmx; tmx += tdx; nx = -sx; ny = 0; nz = 0; }
     else if (tmy < tmz) { y += sy; t = tmy; tmy += tdy; nx = 0; ny = -sy; nz = 0; }
     else { z += sz; t = tmz; tmz += tdz; nx = 0; ny = 0; nz = -sz; }
@@ -1686,7 +1892,7 @@ const MOB_TYPES = {
     },
   },
   zombie: {
-    name: 'Zombie', drops: [[I.ROTTEN_FLESH, 0, 2], [I.IRON_INGOT, 1, 1, 0.05]], hp: 20, speed: 2.2, hw: 0.3, h: 1.95, hostile: true,
+    name: 'Zombie', melee: 3, drops: [[I.ROTTEN_FLESH, 0, 2], [I.IRON_INGOT, 1, 1, 0.05]], hp: 20, speed: 2.2, hw: 0.3, h: 1.95, hostile: true,
     build(m, r) {
       const skin = skinTex('zombie', [92, 140, 76], 0.15);
       const face = skinTex('zombie-face', [92, 140, 76], 0.15, ctx => { px(ctx, '#3d5a32', 0, 0, 8, 2); px(ctx, '#1d2a18', 1, 3, 2, 1); px(ctx, '#1d2a18', 5, 3, 2, 1); px(ctx, '#4a6b3c', 3, 5, 2, 1); });
@@ -1714,6 +1920,50 @@ const MOB_TYPES = {
       addPart(m, r, [8, 12, 4], [0, 12, 0], [0, 0, 0], skin);
       addPart(m, r, [8, 8, 8], [0, 18, 0], [0, 4, 0], withFront(skin, face));
     },
+  },
+};
+MOB_TYPES.piglin = {
+  name: 'Zombifizierter Piglin', drops: [[I.ROTTEN_FLESH, 0, 1], [I.GOLD_NUGGET, 0, 1], [I.GOLD_INGOT, 1, 1, 0.025]],
+  hp: 20, speed: 2.3, hw: 0.3, h: 1.95, neutral: true, melee: 5, fireImmune: true,
+  build(m, r) {
+    const rot = (ctx, rnd) => { for (let i = 0; i < 4; i++) px(ctx, '#7aa860', rnd() * 7 | 0, rnd() * 7 | 0, 2, 1 + (rnd() * 2 | 0)); };
+    const skin = skinTex('piglin', [232, 160, 160], 0.15, rot);
+    const face = skinTex('piglin-face', [232, 160, 160], 0.15, ctx => {
+      px(ctx, '#7aa860', 0, 0, 3, 2); px(ctx, '#fff', 1, 3); px(ctx, '#7a1f1f', 2, 3); px(ctx, '#7a1f1f', 5, 3); px(ctx, '#fff', 6, 3);
+      px(ctx, '#f0e0c0', 1, 6, 1, 2); px(ctx, '#f0e0c0', 6, 6, 1, 2);
+    });
+    const snout = skinTex('piglin-snout', [220, 140, 140], 0.08, ctx => { px(ctx, '#6a3030', 1, 3, 2, 2); px(ctx, '#6a3030', 5, 3, 2, 2); });
+    const cloth = skinTex('piglin-cloth', [140, 100, 60], 0.2, rot);
+    const pants = skinTex('piglin-pants', [90, 64, 48], 0.15);
+    const gold = skinTex('piglin-gold', [245, 205, 70], 0.15);
+    for (const x of [-2, 2]) m.legs.push(addPart(m, r, [4, 12, 4], [x, 12, 0], [0, -6, 0], pants));
+    addPart(m, r, [8, 12, 4], [0, 18, 0], [0, 0, 0], cloth);
+    for (const x of [-6, 6]) {
+      const arm = addPart(m, r, [4, 12, 4], [x, 22, 0], [0, -6, 0], skin);
+      arm.rotation.x = -Math.PI / 2;
+      m.arms.push(arm);
+      if (x > 0) addPart(m, arm, [1, 12, 2], [0, -12, 1], [0, -5, 0], gold);   // Goldschwert
+    }
+    const head = addPart(m, r, [9, 8, 8], [0, 24, 0], [0, 4, 0], withFront(skin, face));
+    addPart(m, head, [5, 4, 1], [0, 2, 4.5], [0, 0, 0], withFront(skin, snout));
+    addPart(m, head, [1, 4, 3], [-5, 6, 0], [0, -2, 0], skin);
+    addPart(m, head, [1, 4, 3], [5, 6, 0], [0, -2, 0], skin);
+  },
+};
+MOB_TYPES.ghast = {
+  name: 'Ghast', drops: [[I.GHAST_TEAR, 0, 1], [I.GUNPOWDER, 0, 2]],
+  hp: 10, speed: 1.6, hw: 2, h: 4, hostile: true, flying: true, fireImmune: true,
+  build(m, r) {
+    const skin = skinTex('ghast', [238, 238, 238], 0.08, (ctx, rnd) => { for (let i = 0; i < 5; i++) px(ctx, '#cfcfcf', rnd() * 8 | 0, rnd() * 8 | 0); });
+    const face = skinTex('ghast-face', [238, 238, 238], 0.08, ctx => { px(ctx, '#666', 1, 3, 2, 1); px(ctx, '#666', 5, 3, 2, 1); px(ctx, '#666', 3, 5, 2, 1); });
+    const angry = skinTex('ghast-angry', [238, 238, 238], 0.08, ctx => { px(ctx, '#b01010', 1, 2, 2, 2); px(ctx, '#b01010', 5, 2, 2, 2); px(ctx, '#222', 2, 5, 4, 2); });
+    addPart(m, r, [64, 64, 64], [0, 32, 0], [0, 0, 0], withFront(skin, face));
+    m.faceMat = m.matCache.get(face); m.faceTex = face; m.angryTex = angry;
+    for (let i = 0; i < 9; i++) {
+      const len = 20 + (i * 5) % 16;
+      const tx = (i % 3 - 1) * 20 + (i * 7 % 5) - 2, tz = (Math.floor(i / 3) - 1) * 20 + (i * 3 % 5) - 2;
+      m.legs.push(addPart(m, r, [4, len, 4], [tx, 0, tz], [0, -len / 2, 0], skin));
+    }
   },
 };
 const ANIMALS = ['pig', 'cow', 'sheep', 'chicken'];
@@ -1767,12 +2017,14 @@ class Mob {
     this.wanderTimer = 0; this.panic = 0;
     this.hurtTimer = 0; this.attackCd = 0; this.burnTimer = 0; this.sunCheck = Math.random();
     this.fuse = 0; this.walkPhase = 0;
+    this.angry = 0;                                   // Zombifizierte Piglins: Wut-Zeit
+    this.flyTimer = 0; this.flyTarget = null; this.shootTimer = 2;   // Ghasts
     this.deadTime = -1; this.removed = false;
   }
 
   get alive() { return this.deadTime < 0 && !this.removed; }
 
-  hurt(amount, fromX, fromZ, knock = 7) {
+  hurt(amount, fromX, fromZ, knock = 7, byPlayer = false) {
     if (!this.alive || this.hurtTimer > 0) return false;
     this.hp -= amount;
     this.hurtTimer = 0.35;
@@ -1781,7 +2033,10 @@ class Mob {
       this.vel[0] = dx / l * knock; this.vel[2] = dz / l * knock; this.vel[1] = 5.5;
       this.onGround = false;
     }
-    if (!this.def.hostile) { this.panic = 5; this.moveDir = [dx / l, dz / l]; }
+    if (this.def.neutral) {
+      // ein getroffener Piglin hetzt alle in der Nähe auf
+      if (byPlayer && !peaceful) for (const m of mobs) if (m.type === this.type && Math.hypot(m.pos[0] - this.pos[0], m.pos[2] - this.pos[2]) < 16) m.angry = 30;
+    } else if (!this.def.hostile) { this.panic = 5; this.moveDir = [dx / l, dz / l]; }
     if (this.hp <= 0) this.deadTime = 0;
     return true;
   }
@@ -1793,6 +2048,52 @@ class Mob {
       const n = min + Math.floor(Math.random() * (max - min + 1));
       if (n > 0) drops.push(new Drop(id, n, this.pos[0], this.pos[1] + 0.5, this.pos[2]));
     }
+  }
+
+  // Ghast: schwebt umher und schießt Feuerbälle auf den Spieler
+  updateFlying(dt) {
+    const d = this.def, p = this.pos, v = this.vel;
+    this.flyTimer -= dt;
+    if (this.flyTimer <= 0 || !this.flyTarget) {
+      this.flyTimer = 3 + Math.random() * 4;
+      this.flyTarget = [p[0] + (Math.random() - 0.5) * 24, Math.max(NETHER_LAVA + 4, Math.min(HEIGHT - 10, p[1] + (Math.random() - 0.5) * 10)), p[2] + (Math.random() - 0.5) * 24];
+    }
+    const tx = this.flyTarget[0] - p[0], ty = this.flyTarget[1] - p[1], tz = this.flyTarget[2] - p[2];
+    const tl = Math.hypot(tx, ty, tz) || 1;
+    if (this.hurtTimer <= 0) {
+      const k = Math.min(1, dt * 1.5), sp = tl < 1 ? 0 : d.speed;
+      v[0] += (tx / tl * sp - v[0]) * k; v[1] += (ty / tl * sp - v[1]) * k; v[2] += (tz / tl * sp - v[2]) * k;
+    } else {
+      const damp = Math.exp(-dt * 2);
+      v[0] *= damp; v[1] *= damp; v[2] *= damp;
+    }
+    let blocked = false;
+    for (let a = 0; a < 3; a++) if (moveBox(p, d.hw, d.h, a, v[a] * dt)) { v[a] = 0; blocked = true; }
+    if (blocked) this.flyTimer = Math.min(this.flyTimer, 0.3);
+
+    const dx = player.pos[0] - p[0], dy = player.pos[1] + EYE - (p[1] + 2), dz = player.pos[2] - p[2];
+    const dist = Math.hypot(dx, dy, dz);
+    const aggro = !peaceful && !player.dead && dist < 40;
+    if (aggro) {
+      this.yaw = Math.atan2(dx, dz);
+      this.shootTimer -= dt;
+      if (this.shootTimer <= 0) {
+        const dir = [dx / dist, dy / dist, dz / dist];
+        shootFireball(p[0] + dir[0] * 2.6, p[1] + 2 + dir[1] * 2.6, p[2] + dir[2] * 2.6, dir, this);
+        this.shootTimer = 3 + Math.random() * 2;
+      }
+    } else {
+      this.shootTimer = Math.max(this.shootTimer, 1.5);
+      if (Math.hypot(v[0], v[2]) > 0.2) this.yaw = Math.atan2(v[0], v[2]);
+    }
+    // kurz vor dem Schuss öffnet der Ghast Augen und Mund
+    const tex = aggro && this.shootTimer < 0.7 ? this.angryTex : this.faceTex;
+    if (this.faceMat.map !== tex) this.faceMat.map = tex;
+    const t = performance.now() / 1000;
+    this.legs.forEach((leg, i) => { leg.rotation.x = Math.sin(t * 2 + i) * 0.25; leg.rotation.z = Math.cos(t * 1.7 + i * 2) * 0.2; });
+    this.root.position.set(p[0], p[1] + Math.sin(t * 1.3) * 0.1, p[2]);
+    this.root.rotation.y = this.yaw;
+    this.setTint(1, this.hurtTimer > 0 ? 0.45 : 1, this.hurtTimer > 0 ? 0.45 : 1);
   }
 
   remove() {
@@ -1824,19 +2125,23 @@ class Mob {
     this.hurtTimer = Math.max(0, this.hurtTimer - dt);
     this.attackCd = Math.max(0, this.attackCd - dt);
     this.burnTimer = Math.max(0, this.burnTimer - dt);
-    this.inWater = world.getBlock(Math.floor(p[0]), Math.floor(p[1] + 0.3), Math.floor(p[2])) === B.WATER;
+    const fluid = world.getBlock(Math.floor(p[0]), Math.floor(p[1] + 0.3), Math.floor(p[2]));
+    this.inWater = FLUID[fluid] === 1;
+    if (fluid === B.LAVA && !d.fireImmune) { this.burnTimer = 1.2; this.hurt(4, p[0], p[2], 0); }
+    if (d.flying) { this.updateFlying(dt); return; }
 
     // ---- KI ----
     const dx = player.pos[0] - p[0], dy = player.pos[1] - p[1], dz = player.pos[2] - p[2];
     const hd = Math.hypot(dx, dz) || 1, dist = Math.hypot(hd, dy);
     let speed = 0;
-    const chasing = d.hostile && !player.dead && dist < 32;
+    this.angry = Math.max(0, this.angry - dt);
+    const chasing = (d.hostile || (d.neutral && this.angry > 0)) && !player.dead && dist < 32;
     if (chasing) {
       this.moveDir = [dx / hd, dz / hd];
       speed = d.speed;
-      if (this.type === 'zombie') {
+      if (d.melee) {
         if (hd < 0.9 + d.hw && Math.abs(dy) < 1.6 && this.attackCd <= 0) {
-          damagePlayer(3, p[0], p[2]);
+          damagePlayer(d.melee, p[0], p[2]);
           this.attackCd = 1;
         }
         if (hd < 0.7) speed = 0;
@@ -1981,14 +2286,55 @@ function trySpawn(hostile) {
   }
 }
 
+// Nether: Piglins in Gruppen auf festem Boden, Ghasts in großen Lufträumen
+function trySpawnNether(ghast) {
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const a = Math.random() * Math.PI * 2, r = 20 + Math.random() * 24;
+    const x = Math.floor(player.pos[0] + Math.cos(a) * r), z = Math.floor(player.pos[2] + Math.sin(a) * r);
+    if (!world.getChunk(x >> 4, z >> 4)?.meshed) continue;
+    if (ghast) {
+      const y = NETHER_LAVA + 6 + Math.floor(Math.random() * 40);
+      const free = [[0, 0, 0], [-2, 0, -2], [2, 0, 2], [-2, 3, 2], [2, 3, -2], [0, 4, 0]].every(([ox, oy, oz]) => world.getBlock(x + ox, y + oy, z + oz) === B.AIR);
+      if (!free) continue;
+      mobs.push(new Mob('ghast', x + 0.5, y, z + 0.5));
+      return;
+    }
+    const spots = [];
+    for (let y = NETHER_LAVA + 1; y < HEIGHT - 4; y++) {
+      const below = world.getBlock(x, y - 1, z);
+      if (SOLID[below] && below !== B.BEDROCK && world.getBlock(x, y, z) === B.AIR && world.getBlock(x, y + 1, z) === B.AIR) spots.push(y);
+    }
+    if (!spots.length) continue;
+    const y = spots[Math.floor(Math.random() * spots.length)];
+    const n = 2 + Math.floor(Math.random() * 3);
+    for (let i = 0; i < n; i++) {
+      const gx = x + Math.floor(Math.random() * 5) - 2, gz = z + Math.floor(Math.random() * 5) - 2;
+      for (let gy = y - 2; gy <= y + 2; gy++) {
+        if (SOLID[world.getBlock(gx, gy - 1, gz)] && world.getBlock(gx, gy, gz) === B.AIR && world.getBlock(gx, gy + 1, gz) === B.AIR) {
+          mobs.push(new Mob('piglin', gx + 0.5, gy, gz + 0.5));
+          break;
+        }
+      }
+    }
+    return;
+  }
+}
+
 function updateMobs(dt) {
   spawnTimer -= dt;
   if (spawnTimer <= 0) {
     spawnTimer = 0.5;
-    let animals = 0, hostile = 0;
-    for (const m of mobs) m.def.hostile ? hostile++ : animals++;
-    if (animals < MAX_ANIMALS) trySpawn(false);
-    if (!peaceful && daylight < 0.35 && hostile < MAX_HOSTILE) trySpawn(true);
+    if (world.dim === 'nether') {
+      let piglins = 0, ghasts = 0;
+      for (const m of mobs) m.type === 'ghast' ? ghasts++ : piglins++;
+      if (piglins < 8) trySpawnNether(false);
+      if (!peaceful && ghasts < 3) trySpawnNether(true);
+    } else {
+      let animals = 0, hostile = 0;
+      for (const m of mobs) m.def.hostile ? hostile++ : animals++;
+      if (animals < MAX_ANIMALS) trySpawn(false);
+      if (!peaceful && daylight < 0.35 && hostile < MAX_HOSTILE) trySpawn(true);
+    }
   }
   for (const m of mobs) {
     if (m.removed) continue;
@@ -2038,6 +2384,45 @@ function updateFx(dt) {
     e.mesh.scale.setScalar((1 + e.t * 12) * e.k);
     e.mesh.material.opacity = 0.85 * Math.max(0, 1 - e.t / 0.4);
     if (e.t > 0.4) { scene.remove(e.mesh); e.mesh.material.dispose(); fx.splice(i, 1); }
+  }
+}
+
+// Feuerbälle der Ghasts – mit einem Schlag lassen sie sich zurückschleudern
+const fireballs = [];
+const fireballGeo = new THREE.BoxGeometry(0.6, 0.6, 0.6);
+const fireballMat = new THREE.MeshBasicMaterial({ color: 0xff7a1e });
+function shootFireball(x, y, z, dir, owner) {
+  const mesh = new THREE.Mesh(fireballGeo, fireballMat);
+  mesh.position.set(x, y, z);
+  scene.add(mesh);
+  fireballs.push({ pos: [x, y, z], vel: dir.map(c => c * 11), owner, mesh, age: 0 });
+}
+function removeFireball(f) {
+  const i = fireballs.indexOf(f);
+  if (i >= 0) fireballs.splice(i, 1);
+  scene.remove(f.mesh);
+}
+function updateFireballs(dt) {
+  for (const f of [...fireballs]) {
+    f.age += dt;
+    if (f.age > 10) { removeFireball(f); continue; }
+    let hit = false;
+    for (let s = 0; s < 4 && !hit; s++) {
+      for (let a = 0; a < 3; a++) f.pos[a] += f.vel[a] * dt / 4;
+      if (SOLID[world.getBlock(Math.floor(f.pos[0]), Math.floor(f.pos[1]), Math.floor(f.pos[2]))]) hit = true;
+      if (f.owner !== 'player') {
+        const pd = Math.hypot(player.pos[0] - f.pos[0], player.pos[1] + 0.9 - f.pos[1], player.pos[2] - f.pos[2]);
+        if (pd < 1.1) { player.hurtCd = 0; damagePlayer(6, f.pos[0], f.pos[2]); setOnFire(5); hit = true; }
+      } else {
+        for (const m of mobs) {
+          if (!m.alive || !m.def.flying) continue;
+          if (Math.hypot(m.pos[0] - f.pos[0], m.pos[1] + m.def.h / 2 - f.pos[1], m.pos[2] - f.pos[2]) < m.def.hw + 0.8) { m.hurt(1000, f.pos[0], f.pos[2], 0, true); hit = true; }
+        }
+      }
+    }
+    f.mesh.position.set(f.pos[0], f.pos[1], f.pos[2]);
+    f.mesh.rotation.x += dt * 5; f.mesh.rotation.y += dt * 7;
+    if (hit) { removeFireball(f); explode(f.pos[0], f.pos[1], f.pos[2], 1); }
   }
 }
 
@@ -2128,6 +2513,7 @@ class Drop {
     const p = this.pos, v = this.vel;
     this.age += dt;
     if (this.age > 300 || !world.getChunk(Math.floor(p[0]) >> 4, Math.floor(p[2]) >> 4)?.meshed) { this.remove(); return; }
+    if (world.getBlock(Math.floor(p[0]), Math.floor(p[1] + 0.1), Math.floor(p[2])) === B.LAVA) { this.remove(); return; }   // verbrennt
     const dx = player.pos[0] - p[0], dy = player.pos[1] + 0.8 - p[1], dz = player.pos[2] - p[2];
     const dist = Math.hypot(dx, dy, dz);
     const canPick = this.age > 0.6 && !player.dead;
@@ -2270,8 +2656,31 @@ function renderEffects() {
   }
 }
 
+// Lava, Feuer und Magmablöcke; Feuerresistenz schützt vor allem davon
+function setOnFire(sec) { if (!player.effects.fire_resistance) player.fire = Math.max(player.fire, sec); }
+function updateHazards(dt, below) {
+  const fireRes = !!player.effects.fire_resistance;
+  if (player.inLava && !fireRes && !player.flying) { damagePlayer(4, 0, 0, 0); player.fire = 8; }
+  if ((player.inWater && !player.inLava) || fireRes) player.fire = 0;
+  if (player.fire > 0) {
+    player.fire -= dt;
+    player.fireTick += dt;
+    if (player.fireTick >= 1) { player.fireTick = 0; player.hurtCd = 0; damagePlayer(1, 0, 0, 0); }
+  }
+  if (below === B.MAGMA && player.onGround && !fireRes) {
+    player.magmaTick += dt;
+    if (player.magmaTick >= 1) { player.magmaTick = 0; player.hurtCd = 0; damagePlayer(1, 0, 0, 0); }
+  } else player.magmaTick = 0.5;
+  fireEl.style.display = player.fire > 0 ? 'block' : 'none';
+  checkPortal(dt);
+}
+
 function die() {
   player.dead = true;
+  player.fire = 0;
+  player.portalTimer = 0;
+  fireEl.style.display = 'none';
+  portalEl.style.opacity = 0;
   player.effects = {};
   player.absorb = 0;
   renderEffects();
@@ -2287,6 +2696,7 @@ function respawn() {
   player.dead = false;
   player.hp = MAX_HP;
   player.vel = [0, 0, 0];
+  if (world !== overworld) switchWorld(overworld);
   player.pos = findSpawn();
   preloadAround();
   player.fallPeak = player.pos[1];
@@ -2295,6 +2705,175 @@ function respawn() {
   saveGame();
   if (IS_TOUCH) setTouchPlaying(true);
   else canvas.requestPointerLock();
+}
+
+// ============================================================
+//  Dimensionen & Netherportal
+// ============================================================
+const SIX = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
+const PORTAL_TIME = 2.5;   // so lange muss man im Portal stehen
+const NETHER_FOG = new THREE.Color(0x3a0d0a);
+const LAVA_FOG = new THREE.Color(0xc8400a);
+
+function applyDimensionLook() {
+  sun.visible = moon.visible = clouds.visible = world.dim === 'overworld';
+}
+
+// Alles aus der aktuellen Welt wegräumen und in die andere wechseln
+function switchWorld(target) {
+  for (const c of world.chunks.values()) disposeChunkMeshes(c);
+  world.chunks.clear();
+  for (const m of mobs) m.remove();
+  mobs.length = 0;
+  for (const d of drops) d.remove();
+  drops.length = 0;
+  for (const t of tnts) { scene.remove(t.mesh); t.mat.dispose(); }
+  tnts.length = 0;
+  for (const f of [...fireballs]) removeFireball(f);
+  world = target;
+  applyDimensionLook();
+}
+
+// Sucht ein Portal in der Nähe des Zielpunkts oder baut ein neues (4×5 Obsidian)
+function findOrBuildPortal(tx, tz) {
+  for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) world.ensureChunk((tx >> 4) + dx, (tz >> 4) + dz);
+  let best = null, bestD = Infinity;
+  for (let z = tz - 16; z <= tz + 16; z++) for (let x = tx - 16; x <= tx + 16; x++) for (let y = 1; y < HEIGHT - 1; y++) {
+    if (!isPortal(world.getBlock(x, y, z)) || isPortal(world.getBlock(x, y - 1, z))) continue;
+    const d = Math.hypot(x - tx, z - tz);
+    if (d < bestD) { bestD = d; best = [x + 0.5, y, z + 0.5]; }
+  }
+  if (best) return best;
+
+  let y = -1;
+  if (world.dim === 'nether') {
+    for (let yy = NETHER_LAVA + 2; yy < HEIGHT - 8 && y < 0; yy++) {
+      if (!SOLID[world.getBlock(tx, yy - 1, tz)]) continue;
+      let free = true;
+      for (let dy = 0; dy <= 3; dy++) for (let dx = -1; dx <= 2; dx++) if (world.getBlock(tx + dx, yy + dy, tz) !== B.AIR) free = false;
+      if (free) y = yy;
+    }
+    if (y < 0) y = NETHER_LAVA + 6;
+  } else {
+    const s = surfaceAt(tx, tz);
+    y = Math.min(HEIGHT - 8, s ? s.y + 1 : 40);
+  }
+  // Platz vor und hinter dem Portal freiräumen, Obsidian-Plattform darunter
+  for (let dx = -1; dx <= 2; dx++) for (const dz of [-1, 1]) {
+    for (let dy = 0; dy <= 3; dy++) if (world.getBlock(tx + dx, y + dy, tz + dz) !== B.BEDROCK) world.setBlock(tx + dx, y + dy, tz + dz, B.AIR);
+    if (!SOLID[world.getBlock(tx + dx, y - 1, tz + dz)]) world.setBlock(tx + dx, y - 1, tz + dz, B.OBSIDIAN);
+  }
+  for (let dx = -1; dx <= 2; dx++) for (let dy = -1; dy <= 3; dy++) {
+    const edge = dx === -1 || dx === 2 || dy === -1 || dy === 3;
+    world.setBlock(tx + dx, y + dy, tz, edge ? B.OBSIDIAN : B.PORTAL_X);
+  }
+  return [tx + 1, y, tz + 0.5];
+}
+
+function travel() {
+  const toNether = world.dim === 'overworld';
+  // Im Nether zählt jeder Block wie 8 Blöcke in der Oberwelt
+  const scale = toNether ? 1 / 8 : 8;
+  const tx = Math.floor(player.pos[0] * scale), tz = Math.floor(player.pos[2] * scale);
+  switchWorld(toNether ? nether : overworld);
+  player.pos = findOrBuildPortal(tx, tz);
+  player.vel = [0, 0, 0];
+  player.fallPeak = player.pos[1];
+  player.portalCooldown = true;   // erst wieder reisen, nachdem man das Portal verlassen hat
+  player.portalTimer = 0;
+  preloadAround();
+  showName(toNether ? 'Willkommen im Nether!' : 'Zurück in der Oberwelt');
+  saveGame();
+}
+
+function inPortal() {
+  const p = player.pos;
+  for (let y = Math.floor(p[1]); y <= Math.floor(p[1] + PLAYER_H); y++)
+    for (let z = Math.floor(p[2] - HALF_W); z <= Math.floor(p[2] + HALF_W); z++)
+      for (let x = Math.floor(p[0] - HALF_W); x <= Math.floor(p[0] + HALF_W); x++)
+        if (isPortal(world.getBlock(x, y, z))) return true;
+  return false;
+}
+function checkPortal(dt) {
+  if (!inPortal()) { player.portalTimer = 0; player.portalCooldown = false; }
+  else if (!player.portalCooldown) {
+    player.portalTimer += dt;
+    if (player.portalTimer >= PORTAL_TIME) travel();
+  }
+  portalEl.style.opacity = Math.min(1, player.portalTimer / PORTAL_TIME) * 0.85;
+}
+
+// Luftfläche innerhalb eines Obsidian-Rahmens finden (axis 0: Portal in x-Richtung, 2: in z-Richtung)
+function portalCells(x, y, z, axis) {
+  const seen = new Set([x + ',' + y + ',' + z]), queue = [[x, y, z]], cells = [];
+  while (queue.length) {
+    const c = queue.pop();
+    cells.push(c);
+    if (cells.length > 21 * 21) return null;
+    for (const [da, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const n = axis === 0 ? [c[0] + da, c[1] + dy, c[2]] : [c[0], c[1] + dy, c[2] + da];
+      const key = n.join(',');
+      if (seen.has(key)) continue;
+      const id = world.getBlock(n[0], n[1], n[2]);
+      if (id === B.OBSIDIAN) continue;
+      if (id !== B.AIR) return null;
+      seen.add(key);
+      queue.push(n);
+    }
+  }
+  const a = cells.map(c => c[axis]), ys = cells.map(c => c[1]);
+  if (Math.max(...a) - Math.min(...a) < 1 || Math.max(...ys) - Math.min(...ys) < 2) return null;   // mindestens 2×3 innen
+  return cells;
+}
+function remeshCells(cells) {
+  const done = new Set();
+  for (const [x, , z] of cells) {
+    const key = (x >> 4) + ',' + (z >> 4);
+    if (done.has(key)) continue;
+    done.add(key);
+    if (world.getChunk(x >> 4, z >> 4)?.meshed) meshChunk(x >> 4, z >> 4);
+  }
+}
+function lightPortal(x, y, z) {
+  for (const axis of [0, 2]) {
+    const cells = portalCells(x, y, z, axis);
+    if (!cells) continue;
+    for (const [cx, cy, cz] of cells) world.setBlock(cx, cy, cz, axis === 0 ? B.PORTAL_X : B.PORTAL_Z);
+    remeshCells(cells);
+    scheduleSave();
+    return true;
+  }
+  return false;
+}
+// Wird der Rahmen beschädigt, erlischt das ganze Portal
+function breakPortalAt(x, y, z) {
+  const id = world.getBlock(x, y, z);
+  if (!isPortal(id)) return;
+  const queue = [[x, y, z]], seen = new Set([x + ',' + y + ',' + z]), cells = [];
+  while (queue.length && seen.size < 2000) {
+    const c = queue.pop();
+    world.setBlock(c[0], c[1], c[2], B.AIR);
+    cells.push(c);
+    for (const [dx, dy, dz] of SIX) {
+      const n = [c[0] + dx, c[1] + dy, c[2] + dz], key = n.join(',');
+      if (!seen.has(key) && world.getBlock(n[0], n[1], n[2]) === id) { seen.add(key); queue.push(n); }
+    }
+  }
+  remeshCells(cells);
+}
+function useFlintAndSteel() {
+  updateTarget();
+  if (!target) return;
+  if (target.id === B.TNT) {
+    world.setBlock(target.x, target.y, target.z, B.AIR);
+    remeshAround(target.x, target.z);
+    primeTNT(target.x, target.y, target.z, 3);
+    scheduleSave();
+    return;
+  }
+  const x = target.x + target.nx, y = target.y + target.ny, z = target.z + target.nz;
+  if (world.getBlock(x, y, z) !== B.AIR) return;
+  showName(lightPortal(x, y, z) ? 'Das Portal leuchtet auf!' : 'Zünde das Innere eines Obsidian-Rahmens an');
 }
 
 // ============================================================
@@ -2340,10 +2919,16 @@ function inventoryChanged() {
 
 // Linksklick / ⛏: Mob angreifen oder Block abbauen
 function primaryAction() {
+  // Feuerbälle zurückschlagen
+  const o = [camera.position.x, camera.position.y, camera.position.z], dir = [rayDir.x, rayDir.y, rayDir.z];
+  for (const f of fireballs) {
+    const t = rayBox(o, dir, f.pos.map(c => c - 0.7), f.pos.map(c => c + 0.7));
+    if (t !== null && t < REACH) { f.vel = dir.map(c => c * 16); f.owner = 'player'; f.age = 0; return; }
+  }
   if (targetMob) {
     if (attackCd > 0) return;
     attackCd = 0.35;
-    targetMob.hurt(4, player.pos[0], player.pos[2]);
+    targetMob.hurt(4, player.pos[0], player.pos[2], 7, true);
     return;
   }
   breakBlock();
@@ -2360,6 +2945,7 @@ function breakBlock() {
   world.setBlock(x, y, z, fill);
   remeshAround(x, z);
   if (id === B.TNT) primeTNT(x, y, z, 3);
+  else if (id === B.OBSIDIAN) for (const [dx, dy, dz] of SIX) breakPortalAt(x + dx, y + dy, z + dz);
   else if (id === B.LEAVES && Math.random() < 0.08) drops.push(new Drop(I.APPLE, 1, x + 0.5, y + 0.3, z + 0.5));
   scheduleSave();
 }
@@ -2368,10 +2954,11 @@ function placeBlock() {
   if (!target) return;
   const x = target.x + target.nx, y = target.y + target.ny, z = target.z + target.nz;
   const cur = world.getBlock(x, y, z);
-  if (cur !== B.AIR && cur !== B.WATER) return;
+  if (cur !== B.AIR && !FLUID[cur]) return;
   const held = heldItem();
   if (!held || !isBlock(held.id)) return;
   const id = held.id;
+  if (id === B.WATER && world.dim === 'nether') { showName('Das Wasser verdampft zischend!'); return; }
   if (SOLID[id]) {
     const p = player.pos;
     const overlap = x + 1 > p[0] - HALF_W && x < p[0] + HALF_W &&
@@ -2395,6 +2982,7 @@ function canEat(id) {
 }
 function startSecondary() {
   const held = heldItem();
+  if (held && held.id === I.FLINT_AND_STEEL) { useFlintAndSteel(); return; }
   if (held && ITEMS[held.id]?.food) {
     if (canEat(held.id)) eating = { id: held.id, t: 0 };
     else showName('Du hast schon volle Lebenspunkte');
@@ -2457,6 +3045,8 @@ const nameEl = document.getElementById('blockname');
 const debugEl = document.getElementById('debug');
 const overlay = document.getElementById('overlay');
 const underwaterEl = document.getElementById('underwater');
+const fireEl = document.getElementById('fire');
+const portalEl = document.getElementById('portalfx');
 const flyHint = document.getElementById('flyhint');
 let nameTimer = null;
 
@@ -2863,30 +3453,44 @@ function updateSky(dt) {
   dayTime = (dayTime + dt / DAY_LENGTH) % 1;
   const angle = dayTime * Math.PI * 2;
   const sunH = Math.sin(angle);
-  daylight = THREE.MathUtils.smoothstep(sunH, -0.15, 0.25);
-  const brightness = 0.38 + 0.62 * daylight;
+  const inNether = world.dim === 'nether';
+  let brightness;
+  if (inNether) {
+    // im Nether gibt es keinen Tag und keine Nacht
+    daylight = 0;
+    brightness = 0.8;
+    skyColor.copy(NETHER_FOG);
+  } else {
+    daylight = THREE.MathUtils.smoothstep(sunH, -0.15, 0.25);
+    brightness = 0.38 + 0.62 * daylight;
+    skyColor.copy(SKY_NIGHT).lerp(SKY_DAY, daylight);
+    const sunset = Math.max(0, 1 - Math.abs(sunH) * 4) * 0.45;
+    skyColor.lerp(SKY_SUNSET, sunset);
+  }
 
-  skyColor.copy(SKY_NIGHT).lerp(SKY_DAY, daylight);
-  const sunset = Math.max(0, 1 - Math.abs(sunH) * 4) * 0.45;
-  skyColor.lerp(SKY_SUNSET, sunset);
-
-  const underwater = world.getBlock(Math.floor(camera.position.x), Math.floor(camera.position.y), Math.floor(camera.position.z)) === B.WATER;
-  if (underwater) {
+  const camBlock = world.getBlock(Math.floor(camera.position.x), Math.floor(camera.position.y), Math.floor(camera.position.z));
+  if (camBlock === B.WATER) {
     scene.fog.color.copy(WATER_FOG).multiplyScalar(brightness);
     scene.fog.near = 1; scene.fog.far = 24;
     scene.background = scene.fog.color;
+  } else if (camBlock === B.LAVA) {
+    scene.fog.color.copy(LAVA_FOG);
+    scene.fog.near = 0.1; scene.fog.far = 3;
+    scene.background = scene.fog.color;
   } else {
     scene.fog.color.copy(skyColor);
-    scene.fog.near = fogFar * 0.55; scene.fog.far = fogFar * 0.95;
+    scene.fog.near = fogFar * (inNether ? 0.15 : 0.55); scene.fog.far = fogFar * (inNether ? 0.8 : 0.95);
     scene.background = skyColor;
   }
-  underwaterEl.style.display = underwater ? 'block' : 'none';
+  underwaterEl.style.display = FLUID[camBlock] ? 'block' : 'none';
+  underwaterEl.style.background = camBlock === B.LAVA ? 'rgba(255, 90, 0, .55)' : '';
 
   const lin = Math.pow(brightness, 2.2);
   lightLin = lin;
   solidMat.color.setScalar(lin);
   waterMat.color.setScalar(lin);
   cloudMat.color.setScalar(Math.max(0.15, brightness));
+  if (inNether) return;
 
   sunDir.set(Math.cos(angle), sunH, 0.25).normalize();
   sun.position.copy(camera.position).addScaledVector(sunDir, 400);
@@ -2917,6 +3521,7 @@ if (saved?.player) {
   player.pos = findSpawn();
 }
 
+applyDimensionLook();
 // Umgebung synchron vorladen, damit man nicht ins Leere fällt
 function preloadAround() {
   const pcx = Math.floor(player.pos[0] / CHUNK), pcz = Math.floor(player.pos[2] / CHUNK);
@@ -2929,7 +3534,7 @@ function preloadAround() {
 }
 preloadAround();
 // Zugriff für Tests/Entwicklung: index.html?debug
-if (new URLSearchParams(location.search).has('debug')) window.blockwelt = { mobs, Mob, player, world, damagePlayer, inventory, addItem, drops, Drop, I, B, ITEMS, openInventory, closeInventory, primeTNT, meshChunk, BLOCK_ORDER };
+if (new URLSearchParams(location.search).has('debug')) window.blockwelt = { mobs, Mob, player, get world() { return world; }, overworld, nether, travel, fireballs, shootFireball, damagePlayer, inventory, addItem, drops, Drop, I, B, ITEMS, openInventory, closeInventory, primeTNT, meshChunk, BLOCK_ORDER };
 player.fallPeak = player.pos[1];
 renderHealth();
 camera.position.set(player.pos[0], player.pos[1] + EYE, player.pos[2]);
@@ -2949,10 +3554,13 @@ renderer.setAnimationLoop(() => {
     updateMobs(dt);
     updateDrops(dt);
     updateTNT(dt);
+    updateFireballs(dt);
     updatePlayerEffects(dt);
     updateEating(dt);
   } else camera.rotation.set(player.pitch, player.yaw, 0);
   updateFx(dt);
+  portalAnim += dt;
+  if (portalAnim > 0.08) { portalAnim = 0; drawPortal(performance.now() / 1000); }
   attackCd = Math.max(0, attackCd - dt);
   updateTarget();
 
@@ -2974,7 +3582,7 @@ renderer.setAnimationLoop(() => {
       `XYZ: ${p[0].toFixed(2)} / ${p[1].toFixed(2)} / ${p[2].toFixed(2)}\n` +
       `Chunk: ${Math.floor(p[0] / CHUNK)}, ${Math.floor(p[2] / CHUNK)}  geladen: ${world.chunks.size}\n` +
       `Uhrzeit: ${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}\n` +
-      `Seed: ${seed}\n` +
+      `Seed: ${seed}  Dimension: ${world.dim === 'nether' ? 'Nether' : 'Oberwelt'}\n` +
       `Mobs: ${mobs.length}  Leben: ${player.hp}/${MAX_HP}\n` +
       (targetMob ? `Ziel: ${targetMob.def.name} (${targetMob.hp} HP)` :
        target ? `Ziel: ${BLOCKS[target.id].name} (${target.x}, ${target.y}, ${target.z})` : '');

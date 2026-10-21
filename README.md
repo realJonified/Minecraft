@@ -24,6 +24,9 @@ python3 -m http.server
 - Tiere droppen Beute (Fleisch, Leder, Wolle, Federn), Zombies verrottetes Fleisch, Creeper Schwarzpulver – einfach drüberlaufen zum Einsammeln
 - Essen heilt (Rechtsklick bzw. 🧱 gedrückt halten). Goldener Apfel und der OP **Verzauberte Goldene Apfel** wie im echten Minecraft: Regeneration II, Absorption IV (goldene Herzen), Resistenz und Feuerresistenz
 - TNT: abbauen zündet es, Explosionen lösen Kettenreaktionen aus (Obsidian ist sprengsicher)
+- **Der Nether**: Rahmen aus Obsidian bauen (mind. 4×5), mit dem Feuerzeug anzünden, 2 Sekunden reinstellen. Dort warten Netherrack-Höhlen, ein riesiger Lavasee, Seelensand, Magmablöcke, Leuchtstein-Trauben, Netherquarz- und Nethergolderz. Ein Block im Nether entspricht 8 Blöcken in der Oberwelt; auf der anderen Seite wird automatisch ein Portal gebaut
+- Nether-Mobs: Zombifizierte Piglins (friedlich, bis man einen schlägt – dann greift die ganze Gruppe an) und Ghasts, die Feuerbälle schießen. Feuerbälle kann man mit einem Schlag zurückschleudern!
+- Lava (auch tief in den Höhlen der Oberwelt) setzt dich in Brand – Feuerresistenz vom Verzauberten Goldenen Apfel schützt
 - Erzadern, Granit/Diorit/Andesit, Kies- und Tonböden im Meer, Sandstein unter Stränden
 - Spielerphysik mit Schwerkraft, Springen, Kollision, Schwimmen und Sprinten
 - Flugmodus
