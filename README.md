@@ -30,13 +30,15 @@ Spitzhacken, Äxte, Schaufeln, Hacken und Schwerter gibt es aus **Holz, Stein, E
 
 | Spitzhacke | Stein abbauen | Erze (z. B. Eisen) | Kann abbauen | Haltbarkeit |
 |---|---|---|---|---|
-| Hand | 7,5 s (ohne Drop) | – | – | – |
+| Hand | 6 s (ohne Drop) | – | – | – |
 | Holz | 6 s | – | Stein, Kohle | 59 |
-| Stein | 4 s | 8 s | + Eisen, Lapis | 131 |
+| Stein | 4 s | 6 s | + Eisen, Lapis | 131 |
 | Eisen | 3 s | 6 s | + Gold, Diamant, Redstone, Smaragd | 250 |
 | Gold | 2 s | – | Stein, Kohle | 32 |
 | Diamant | 1,5 s | 3 s | + Obsidian, Antiker Schutt | 1561 |
 | Netherite | 1 s | 2 s | alles | 2031 |
+
+Kein Block braucht länger als **6 Sekunden** zum Abbauen, auch nicht mit der Hand. Einzige Ausnahme ist **Obsidian**. Ohne passendes Werkzeug gibt es aber keinen Drop.
 
 **Netherite:** Antiken Schutt tief im Nether (mit Diamantspitzhacke) abbauen → im Ofen zu Netheriteplatten schmelzen → 4 Platten + 4 Goldbarren = Netheritebarren → Diamant-Werkzeug oder -Rüstung + Netheritebarren in der Werkbank = Netherite-Version. Netherite verbrennt nicht in Lava.
 

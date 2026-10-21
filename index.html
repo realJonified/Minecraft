@@ -4238,7 +4238,12 @@ function canHarvest(blockId, heldId) {
 }
 // Spitzhacken: Sekunden für einen normalen Steinblock (härtere Blöcke dauern entsprechend länger)
 const PICKAXE_TIME = { WOODEN: 6, STONE: 4, IRON: 3, GOLDEN: 2, DIAMOND: 1.5, NETHERITE: 1 };
+const MAX_BREAK = 6;   // höchstens 6 s pro Block (auch mit der Hand), nur Obsidian dauert länger
 function breakTime(blockId, heldId) {
+  const t = rawBreakTime(blockId, heldId);
+  return blockId === B.OBSIDIAN || t === Infinity ? t : Math.min(t, MAX_BREAK);   // Grundgestein bleibt unzerstörbar
+}
+function rawBreakTime(blockId, heldId) {
   const h = HARDNESS[blockId] ?? 1;
   if (h === Infinity) return Infinity;
   if (h === 0) return 0.05;
