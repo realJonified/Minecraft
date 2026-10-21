@@ -118,6 +118,7 @@
   .panel button { display: block; width: 100%; margin: 8px 0; padding: 12px; font-size: 18px; color: #fff; background: #6b6b6b; border: 3px solid #222; box-shadow: inset 2px 2px 0 #999, inset -2px -2px 0 #444; cursor: pointer; font-family: inherit; }
   .panel button:hover { background: #7c8fc0; }
   .panel .row2 { display: flex; gap: 8px; }
+  #sleep { position: fixed; inset: 0; background: #05060c; opacity: 0; pointer-events: none; transition: opacity .2s; }
   .panel .row2 button { font-size: 16px; }
   .controls { margin-top: 18px; text-align: left; font-size: 14px; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; color: #ccc; }
   .controls b { color: #fff; font-family: monospace; font-size: 13px; }
@@ -170,6 +171,7 @@
 <div id="effects"></div>
 <div id="eatbar"><div></div></div>
 <div id="hurt"></div>
+<div id="sleep"></div>
 <div id="hotbar"></div>
 <div id="debug"></div>
 <div id="flyhint">✈ Flugmodus</div>
@@ -193,7 +195,7 @@
       <b>Linksklick</b><span>Block abbauen (im Überleben gedrückt halten) / Mob schlagen</span>
       <b>Rechtsklick</b><span>Block setzen / Essen (gedrückt halten)</span>
       <b>E</b><span>Inventar (Kreativ: Auswahl, Überleben: 2×2-Crafting)</span>
-      <b>Rechtsklick</b><span>auf Werkbank / Ofen: öffnen · auf Dorfbewohner: handeln</span>
+      <b>Rechtsklick</b><span>auf Werkbank / Ofen: öffnen · Dorfbewohner: handeln · Bett: schlafen</span>
       <b>Mittelklick</b><span>Block auswählen</span>
       <b>1–9 / Mausrad</b><span>Block wechseln</span>
       <b>F / 2× Leertaste</b><span>Flugmodus an/aus (Kreativ)</span>
@@ -323,6 +325,11 @@ const TILE_NAMES = [
   'jukebox_top', 'jukebox_side', 'note_block', 'terracotta', 'ancient_debris_side', 'ancient_debris_top', 'netherite_block',
   ...WOOL_COLORS.map(w => 'concrete_' + w[0]),
   ...WOOL_COLORS.map(w => 'terracotta_' + w[0]),
+  'cherry_side', 'cherry_top', 'cherry_planks', 'cherry_leaves', 'mangrove_planks', 'bamboo_planks', 'crimson_planks', 'warped_planks',
+  'crimson_nylium_top', 'crimson_nylium_side', 'warped_nylium_top', 'warped_nylium_side', 'nether_wart_block', 'warped_wart_block', 'red_nether_bricks',
+  'quartz_bricks', 'quartz_pillar_top', 'quartz_pillar_side', 'chiseled_sandstone', 'purpur_pillar_top', 'purpur_pillar_side', 'packed_ice', 'blue_ice',
+  'honeycomb', 'slime', 'oxidized_copper', 'cut_copper', 'coal_block', 'raw_iron_block', 'raw_gold_block', 'deepslate_tiles', 'redstone_lamp',
+  'froglight_top', 'froglight_side', 'red_mushroom_block', 'bed_head_top', 'bed_foot_top', 'bed_side_head', 'bed_side_foot', 'bed_end',
 ];
 const T = Object.fromEntries(TILE_NAMES.map((n, i) => [n, i]));
 const TILE_PX = 128;                      // Auflösung einer Blocktextur (128×128 Pixel)
@@ -477,6 +484,47 @@ more('TERRACOTTA', 'Keramik', ['terracotta']);
 WOOL_COLORS.forEach(([key, adj]) => more('TERRACOTTA_' + key.toUpperCase(), adj + ' Keramik', ['terracotta_' + key]));
 more('ANCIENT_DEBRIS', 'Antiker Schutt', ['ancient_debris_top', 'ancient_debris_side', 'ancient_debris_top']);
 more('NETHERITE_BLOCK', 'Netheriteblock', ['netherite_block']);
+// Chunks speichern Block-IDs als Byte (0–255): ab hier werden die restlichen freien IDs der Reihe nach vergeben.
+// Auch diese Liste nur hinten verlängern, sonst passen alte Spielstände nicht mehr!
+const FREE_IDS = [88, 89, 90, 91, 92, 93, 94, 95, 96, 97, 98, 99, 156, 157, 158, 159, ...Array.from({ length: 256 - nextId }, (_, i) => nextId + i)];
+const add = (key, name, tiles, opts) => def(FREE_IDS.shift(), key, name, tiles, opts);
+add('BED_FOOT', 'Bett', ['bed_foot_top', 'bed_side_foot', 'planks', 'bed_end'], { opaque: false });
+add('BED_HEAD', 'Bett', ['bed_head_top', 'bed_side_head', 'planks', 'bed_end'], { opaque: false });
+add('CHERRY_LOG', 'Kirschholzstamm', ['cherry_top', 'cherry_side', 'cherry_top']);
+add('CHERRY_PLANKS', 'Kirschholzbretter', ['cherry_planks']);
+add('CHERRY_LEAVES', 'Kirschblätter', ['cherry_leaves'], { opaque: false, leaves: true });
+add('MANGROVE_PLANKS', 'Mangrovenholzbretter', ['mangrove_planks']);
+add('BAMBOO_PLANKS', 'Bambusbretter', ['bamboo_planks']);
+add('CRIMSON_PLANKS', 'Karmesinbretter', ['crimson_planks']);
+add('WARPED_PLANKS', 'Wirrbretter', ['warped_planks']);
+add('CRIMSON_NYLIUM', 'Karmesin-Nyzel', ['crimson_nylium_top', 'crimson_nylium_side', 'netherrack']);
+add('WARPED_NYLIUM', 'Wirr-Nyzel', ['warped_nylium_top', 'warped_nylium_side', 'netherrack']);
+add('NETHER_WART_BLOCK', 'Netherwarzenblock', ['nether_wart_block']);
+add('WARPED_WART_BLOCK', 'Wirrwarzenblock', ['warped_wart_block']);
+add('RED_NETHER_BRICKS', 'Rote Netherziegel', ['red_nether_bricks']);
+add('QUARTZ_BRICKS', 'Quarzziegel', ['quartz_bricks']);
+add('QUARTZ_PILLAR', 'Quarzsäule', ['quartz_pillar_top', 'quartz_pillar_side', 'quartz_pillar_top']);
+add('SMOOTH_SANDSTONE', 'Glatter Sandstein', ['sandstone_top']);
+add('CHISELED_SANDSTONE', 'Gemeißelter Sandstein', ['sandstone_top', 'chiseled_sandstone', 'sandstone_top']);
+add('PURPUR_PILLAR', 'Purpursäule', ['purpur_pillar_top', 'purpur_pillar_side', 'purpur_pillar_top']);
+add('PACKED_ICE', 'Packeis', ['packed_ice']);
+add('BLUE_ICE', 'Blaueis', ['blue_ice']);
+add('HONEYCOMB_BLOCK', 'Honigwabenblock', ['honeycomb']);
+add('SLIME_BLOCK', 'Schleimblock', ['slime']);
+add('OXIDIZED_COPPER', 'Oxidierter Kupferblock', ['oxidized_copper']);
+add('CUT_COPPER', 'Geschnittener Kupferblock', ['cut_copper']);
+add('COAL_BLOCK', 'Kohleblock', ['coal_block']);
+add('RAW_IRON_BLOCK', 'Roheisenblock', ['raw_iron_block']);
+add('RAW_GOLD_BLOCK', 'Rohgoldblock', ['raw_gold_block']);
+add('DEEPSLATE_TILES', 'Tiefenschieferfliesen', ['deepslate_tiles']);
+add('REDSTONE_LAMP', 'Redstone-Lampe', ['redstone_lamp'], { glow: true });
+add('OCHRE_FROGLIGHT', 'Ockerfarbenes Froschlicht', ['froglight_top', 'froglight_side', 'froglight_top'], { glow: true });
+add('RED_MUSHROOM_BLOCK', 'Roter Pilzblock', ['red_mushroom_block']);
+const isBed = (id) => id === B.BED_FOOT || id === B.BED_HEAD;
+OCCLUDES[B.BED_FOOT] = OCCLUDES[B.BED_HEAD] = 0;
+// Höhe niedriger Blöcke (Kollision): Betten sind 9/16 hoch
+const BLOCK_H = new Float32Array(256).fill(1);
+BLOCK_H[B.BED_FOOT] = BLOCK_H[B.BED_HEAD] = 0.5625;
 const COLOR_KEYS = WOOL_COLORS.map(w => w[0].toUpperCase());
 
 // Brennbare Blöcke (Feuer breitet sich darauf aus)
@@ -484,7 +532,8 @@ const FLAMMABLE = new Uint8Array(256);
 for (const id of [B.LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.PLANKS, B.BIRCH_PLANKS, B.SPRUCE_PLANKS, B.LEAVES, B.BIRCH_LEAVES, B.SPRUCE_LEAVES,
                   B.BOOKSHELF, B.CRAFTING, B.HAY, B.TNT, ...WOOL_COLORS.map((_, i) => 54 + i),
                   B.JUNGLE_LOG, B.JUNGLE_PLANKS, B.JUNGLE_LEAVES, B.ACACIA_LOG, B.ACACIA_PLANKS, B.ACACIA_LEAVES,
-                  B.DARK_OAK_LOG, B.DARK_OAK_PLANKS, B.DARK_OAK_LEAVES, B.JUKEBOX, B.NOTE_BLOCK]) FLAMMABLE[id] = 1;
+                  B.DARK_OAK_LOG, B.DARK_OAK_PLANKS, B.DARK_OAK_LEAVES, B.JUKEBOX, B.NOTE_BLOCK,
+                  B.CHERRY_LOG, B.CHERRY_PLANKS, B.CHERRY_LEAVES, B.MANGROVE_PLANKS, B.BAMBOO_PLANKS, B.RED_MUSHROOM_BLOCK, B.BED_FOOT, B.BED_HEAD]) FLAMMABLE[id] = 1;
 const FLUID = new Uint8Array(256);
 FLUID[B.WATER] = FLUID[B.LAVA] = 1;
 const isPortal = (id) => id === B.PORTAL_X || id === B.PORTAL_Z;
@@ -533,6 +582,7 @@ item(134, 'ENDER_PEARL', 'Enderperle', { stack: 16 });
 item(135, 'EYE_OF_ENDER', 'Enderauge');
 item(151, 'COPPER_INGOT', 'Kupferbarren');
 item(154, 'BREAD', 'Brot', { heal: 5 });
+item(155, 'BED', 'Bett', { stack: 1 });
 // Werkzeuge: tier = Abbaustufe (1 Holz/Gold, 2 Stein, 3 Eisen, 4 Diamant), speed = Abbau-Tempo
 // Haltbarkeit je Material (wie in Minecraft)
 const DURABILITY = { WOODEN: 59, STONE: 131, IRON: 250, GOLDEN: 32, DIAMOND: 1561, NETHERITE: 2031 };
@@ -589,6 +639,10 @@ const CREATIVE_TABS = {
     B.TNT, B.HAY, B.SPONGE, B.END_FRAME, B.DRAGON_EGG]],
   items: ['🍎', 'Items', ITEM_ORDER],
 };
+CREATIVE_TABS.bauen[2].push(B.CHERRY_PLANKS, B.MANGROVE_PLANKS, B.BAMBOO_PLANKS, B.CRIMSON_PLANKS, B.WARPED_PLANKS, B.SMOOTH_SANDSTONE, B.CHISELED_SANDSTONE,
+  B.QUARTZ_BRICKS, B.QUARTZ_PILLAR, B.PURPUR_PILLAR, B.RED_NETHER_BRICKS, B.DEEPSLATE_TILES, B.CUT_COPPER, B.OXIDIZED_COPPER, B.COAL_BLOCK, B.RAW_IRON_BLOCK, B.RAW_GOLD_BLOCK);
+CREATIVE_TABS.natur[2].push(B.CHERRY_LOG, B.CHERRY_LEAVES, B.PACKED_ICE, B.BLUE_ICE, B.CRIMSON_NYLIUM, B.WARPED_NYLIUM, B.NETHER_WART_BLOCK, B.WARPED_WART_BLOCK, B.RED_MUSHROOM_BLOCK);
+CREATIVE_TABS.deko[2].push(B.REDSTONE_LAMP, B.OCHRE_FROGLIGHT, B.HONEYCOMB_BLOCK, B.SLIME_BLOCK);
 const BLOCK_ORDER = ['bauen', 'natur', 'farben', 'deko'].flatMap(k => CREATIVE_TABS[k][2]);
 const PALETTE_ALL = [...BLOCK_ORDER, ...ITEM_ORDER];
 
@@ -846,6 +900,7 @@ function makeAtlas() {
     ['jungle', 'jungle_side', 'jungle_top', 'jungle_planks', 'jungle_leaves', ['#45351a', '#4a3a1a', '#56451f', '#5f4c22', '#6b5528'], '#2e2410', ['#8a5a36', '#96643c', '#a06c42', '#aa7448', '#b47c4e'], ['#8f623c', '#9a6a42', '#a8744a', '#b07d50', '#ba8656'], '#64401f', ['#246010', '#2a6a12', '#348018', '#3e931e', '#4aa826'], 0.16],
     ['acacia', 'acacia_side', 'acacia_top', 'acacia_planks', 'acacia_leaves', ['#4a4743', '#5a5650', '#67625b', '#726c64', '#7c766d'], '#3a3733', ['#a85428', '#b05a2e', '#ba6434', '#c46e3a', '#cc7840'], ['#9c4e28', '#a8552c', '#b85f32', '#c46a3a', '#cc7442'], '#75391c', ['#435f17', '#4a6a1a', '#567a20', '#628a26', '#6e9a2c'], 0.2],
     ['dark_oak', 'dark_oak_side', 'dark_oak_top', 'dark_oak_planks', 'dark_oak_leaves', ['#261c10', '#2e2214', '#3a2a18', '#43311d', '#4b3720'], '#170f08', ['#3a2814', '#4a3620', '#55402a', '#5e472e', '#684f34'], ['#38250f', '#3e2a16', '#46301a', '#4f371e', '#583e22'], '#20140a', ['#1a4010', '#1f4a12', '#275a16', '#2f6a1a', '#36761e'], 0.14],
+    ['cherry', 'cherry_side', 'cherry_top', 'cherry_planks', 'cherry_leaves', ['#2e1a20', '#38202a', '#432731', '#4d2e38', '#56343f'], '#1e1014', ['#d89a9a', '#e0a6a4', '#e8b2ae', '#eebcb6', '#f2c6c0'], ['#d8a09c', '#e0aaa6', '#e6b4ae', '#ecbeb6', '#f2c8c0'], '#a46a6a', ['#d06aa2', '#da78ae', '#e486ba', '#ec96c6', '#f2a6d0', '#f8b6da'], 0.15],
   ];
   for (const [, side, top, plank, leaf, barkPal, groove, woodPal, plankPal, sep, leafPal, holes] of woods) {
     let barkFn;
@@ -1240,6 +1295,115 @@ function makeAtlas() {
     const tn = vnoise(4, 12);
     tile('terracotta', (x, y) => mul('#985e43', 0.93 + tn(x, y) * 0.1 + (rnd() - 0.5) * 0.05));
   }
+  // ---- Weitere Blöcke ----
+  tile('mangrove_planks', planks(['#6a2c2a', '#753230', '#7f3936', '#89403c', '#924742'], '#3e1816'));
+  {
+    const n = noisy(['#c8b048', '#d2ba52', '#dcc45c', '#e4cc66'], 6, 0.3);
+    tile('bamboo_planks', (x, y) => x % 8 === 0 ? '#8a7a2a' : x % 8 === 7 ? '#a89838' : (y % 16 === 3 && x % 8 === 4) ? '#9a8a30' : n(x, y));
+  }
+  tile('crimson_planks', planks(['#5a2a3a', '#652f42', '#70354a', '#7b3b52', '#86425a'], '#32141e'));
+  tile('warped_planks', planks(['#24625c', '#2a6c64', '#30766e', '#368078', '#3d8a82'], '#123a36'));
+  {
+    const crimson = noisy(['#7a0a0a', '#8a1010', '#9a1616', '#aa1e1e', '#ba2828'], 8, 0.5);
+    const warped = noisy(['#145c58', '#16665e', '#1a7268', '#208070', '#2a8c7a'], 8, 0.5);
+    const d1 = drips(4, 4), d2 = drips(4, 4);
+    tile('crimson_nylium_top', crimson);
+    tile('warped_nylium_top', warped);
+    tile('crimson_nylium_side', (x, y) => y < d1[x] ? crimson(x, y) : netherrack(x, y));
+    tile('warped_nylium_side', (x, y) => y < d2[x] ? warped(x, y) : netherrack(x, y));
+    const v = voronoi(20);
+    const wart = (pal, dark) => (x, y) => { const c = v(x, y); return c.edge < 0.8 ? dark : mul(pick(pal, c.cell[2] * 0.6 + rnd() * 0.4), c.d < 2 ? 1.12 : 1); };
+    tile('nether_wart_block', wart(['#6e0606', '#7e0a0a', '#8e1010', '#a01616'], '#4a0202'));
+    tile('warped_wart_block', wart(['#0e6e66', '#128070', '#16907c', '#1ea088'], '#06463e'));
+  }
+  tile('red_nether_bricks', masonry(noisy(['#4a0808', '#560c0c', '#621010', '#6e1414'], 6, 0.6), 8, 16, 8, '#260202'));
+  {
+    const q = noisy(['#e6dfd3', '#ece6dc', '#f2ede6', '#f6f2ec'], 6, 0.25);
+    tile('quartz_bricks', masonry(q, 16, 16, 8, '#c4bcae'));
+    tile('quartz_pillar_side', (x, y) => x < 2 || x > E - 2 ? mul(q(x, y), 0.88) : x === 2 || x === E - 2 ? '#cfc7b9' : q(x, y));
+    tile('quartz_pillar_top', (x, y) => { const d = Math.max(Math.abs(x - M), Math.abs(y - M)); return d > 14 ? '#cfc7b9' : d > 9 && d < 10.5 ? '#d8d0c2' : q(x, y); });
+  }
+  {
+    // gemeißelter Sandstein mit eingeritztem Creeper-Gesicht
+    const sd = noisy(['#cdc088', '#d1c48d', '#d8cd98', '#ddd3a2', '#e3daaf'], 10, 0.35), line = '#b5a670';
+    const carve = (x, y) => (y >= 11 && y <= 13 && ((x >= 10 && x <= 12) || (x >= 19 && x <= 21))) || (x >= 14 && x <= 17 && y >= 14 && y <= 19) || (y >= 17 && y <= 21 && ((x >= 12 && x <= 13) || (x >= 18 && x <= 19)));
+    tile('chiseled_sandstone', (x, y) => {
+      if (y === 2 || y === E - 2) return line;
+      if (y < 2 || y > E - 2) return mul(sd(x, y), 1.04);
+      if (((x === 5 || x === E - 5) && y >= 5 && y <= E - 5) || ((y === 5 || y === E - 5) && x >= 5 && x <= E - 5)) return line;
+      return carve(x, y) ? '#a8975e' : sd(x, y);
+    });
+  }
+  {
+    const n = noisy(['#946894', '#9a6e9a', '#a77ba7', '#b38bb3', '#bd96bd'], 8, 0.35);
+    tile('purpur_pillar_side', (x, y) => x % 8 === 0 ? '#74507a' : x % 8 === 1 ? '#c09ac0' : n(x, y));
+    tile('purpur_pillar_top', (x, y) => { const d = Math.max(Math.abs(x - M), Math.abs(y - M)); return d > 14 ? '#74507a' : Math.floor(d) % 4 === 0 ? '#86608a' : n(x, y); });
+  }
+  {
+    const n = noisy(['#8aa8dc', '#94b2e4', '#9ebcec', '#a8c6f2'], 6, 0.25), cr = scribble(4, 10);
+    tile('packed_ice', (x, y) => cr.has(x + ',' + y) ? '#c8dcf8' : n(x, y));
+    const b = noisy(['#5a8ae6', '#6496ee', '#70a2f4', '#7caef8'], 6, 0.3), cb = scribble(7, 12);
+    tile('blue_ice', (x, y) => cb.has(x + ',' + y) ? '#b4d4ff' : b(x, y));
+  }
+  tile('honeycomb', (x, y) => {
+    const row = Math.floor(y / 6), lx = (x + (row % 2) * 4) % 8, ly = y % 6;
+    if (ly === 5 || lx === 7) return '#a8640c';
+    if (ly === 0 || lx === 0) return '#f6c044';
+    return pick(['#dc9418', '#e49e1e', '#eca826'], rnd());
+  });
+  tile('slime', (x, y) => {
+    const d = Math.max(Math.abs(x - M), Math.abs(y - M));
+    if (d > 14.5) return '#5a9a48';
+    if (d > 13.5) return '#8ad070';
+    if (d < 6) return d > 5 ? '#4a8a3a' : pick(['#5aa848', '#62b050'], rnd());
+    return pick(['#76c25e', '#7ec866', '#84ce6c'], rnd() * 0.5 + (x < M && y < M ? 0.5 : 0));
+  });
+  tile('oxidized_copper', noisy(['#4a9a82', '#52a68c', '#5ab296', '#62bc9e', '#6ec6a8'], 8, 0.5));
+  {
+    const n = noisy(['#c0603e', '#c86a44', '#d0744c', '#d87e54'], 6, 0.35);
+    tile('cut_copper', (x, y) => x % 16 === 0 || y % 16 === 0 ? '#e8a07a' : x % 16 === 15 || y % 16 === 15 ? '#8a4026' : n(x, y));
+  }
+  metal('coal_block', ['#141414', '#1a1a1a', '#222222'], '#3c3c3c', '#080808');
+  const rawBlock = (name, pal, dark) => {
+    const v = voronoi(10);
+    tile(name, (x, y) => { const c = v(x, y); if (c.edge < 1) return dark; return mul(pick(pal, c.cell[2]), c.dx + c.dy < -2 ? 1.18 : c.dx + c.dy > 2 ? 0.82 : 1); });
+  };
+  rawBlock('raw_iron_block', ['#a08a74', '#b09a84', '#c4ae96', '#d8c2aa'], '#6a5a4a');
+  rawBlock('raw_gold_block', ['#d8a020', '#e8b42a', '#f2c63a', '#fad64e'], '#8a6010');
+  tile('deepslate_tiles', masonry(noisy(['#34343b', '#3c3c44', '#45454d', '#4f4f57'], 10, 0.5), 8, 8, 0, '#1a1a1e'));
+  tile('redstone_lamp', (x, y) => {
+    const lx = x % 16, ly = y % 16;
+    if (x < 2 || y < 2 || x > E - 2 || y > E - 2) return '#5a3a22';
+    if (lx === 7 || lx === 8 || ly === 7 || ly === 8) return '#8a5a30';
+    return pick(['#f0b060', '#f8c470', '#ffd890', '#ffe8b0'], rnd() * 0.6 + (Math.hypot(lx - 7.5, ly - 7.5) < 4 ? 0.4 : 0));
+  });
+  tile('froglight_top', (x, y) => { const d = Math.max(Math.abs(x - M), Math.abs(y - M)); return d > 14 ? '#c8a050' : Math.floor(d) % 4 < 2 ? '#fbe8a0' : '#f4d278'; });
+  tile('froglight_side', (x, y) => x % 6 < 1 ? '#d0aa58' : y % 10 < 1 ? '#e8c46c' : pick(['#f6dc88', '#fae6a0', '#fff0b8'], rnd()));
+  {
+    const spots = [[6, 6, 3], [22, 9, 4], [12, 22, 3.5], [26, 26, 2.5], [3, 18, 2]];
+    tile('red_mushroom_block', (x, y) => {
+      for (const [sx, sy, r] of spots) {
+        const dx = Math.min(Math.abs(x - sx), S - Math.abs(x - sx)), dy = Math.min(Math.abs(y - sy), S - Math.abs(y - sy));
+        if (Math.hypot(dx, dy) < r) return pick(['#e8e0d4', '#f2ece2'], rnd());
+      }
+      return pick(['#b81e1e', '#c42424', '#cc2a2a', '#d43232'], rnd());
+    });
+  }
+  // Bett: Kopfteil mit Kissen (oben in der Kachel = Kopfende), Decke, Holzrahmen an den Seiten
+  {
+    const blanket = (x, y) => mul(pick(['#a8201e', '#b42622', '#bd2c26', '#c4322a'], rnd() * 0.5 + 0.25), (x + y) % 8 === 0 ? 0.92 : 1);
+    const sheet = () => pick(['#e4e0d8', '#ebe7df', '#f2eee6'], rnd());
+    const wood = planks(['#7a5a34', '#86643a', '#906c40', '#9a7446'], '#4a3420');
+    tile('bed_head_top', (x, y) => {
+      if (y >= 3 && y <= 13 && x >= 4 && x <= E - 4) return y === 13 || x === 4 || x === E - 4 ? '#cdc6ba' : pick(['#f8f6f0', '#fcfbf7'], rnd());
+      return y < 18 ? sheet() : y === 18 ? '#7e1612' : blanket(x, y);
+    });
+    tile('bed_foot_top', (x, y) => y > 27 ? mul(blanket(x, y), 0.86) : blanket(x, y));
+    const side = (top) => (x, y) => y >= 23 ? wood(x, y) : y === 22 ? '#3a2a18' : top(x, y);
+    tile('bed_side_head', side(sheet));
+    tile('bed_side_foot', side(blanket));
+    tile('bed_end', side(blanket));
+  }
 
   ctx.putImageData(img, 0, 0);
   return canvas;
@@ -1344,6 +1508,9 @@ const ITEM_ART = {
   tear: [
     '................', '................', '.......o........', '......owo.......', '......owo.......', '.....owwco......', '.....owwco......', '....owwwcco.....',
     '....owwwcco.....', '....owwccco.....', '.....occco......', '......ooo.......', '................', '................', '................', '................'],
+  bed: [
+    '................', '................', '................', '................', '................', '................', 'oo.......oooooo.', 'owwwwoooorrrrrro',
+    'owwwwrrrrrrrrrro', 'owwwwrrrrrrrrrro', 'ooooooooooooooo.', 'obbbbbbbbbbbbbbo', 'o.o..........o.o', 'o.o..........o.o', '................', '................'],
   bread: [
     '................', '................', '................', '................', '.....oooooo.....', '...oohhhhhhoo...', '..ohhlhhlhhhbo..', '.ohhhhlhhhlhhbo.',
     '.obhhhhhhhhhhbo.', '.obbbhhhhhhbbbo.', '..obbbbbbbbbbo..', '...oooooooooo...', '................', '................', '................', '................'],
@@ -1402,6 +1569,7 @@ const ITEM_LOOK = {
   NETHERITE_SCRAP: ['lump', { o: '#1e1612', h: '#7a5e4a', c: '#4e3a2c', d: '#3a2a20' }],
   NETHERITE_INGOT: ['ingot', { h: '#8a8284', w: '#5a5456', m: '#454042', o: '#1e1a1c' }],
   ...Object.fromEntries(ARMOR_MATS.flatMap(([mat]) => ARMOR_PIECES.map(piece => [mat + '_' + piece, [piece.toLowerCase(), ARMOR_COLORS[mat]]]))),
+  BED: ['bed', { o: '#3a2412', w: '#f2eee6', r: '#b42622', b: '#8a643a' }],
   BREAD: ['bread', { o: '#5a3410', h: '#d8a050', l: '#f2cc80', b: '#a86a28' }],
   ENDER_PEARL: ['orb', { o: '#0a2a26', c: '#1a6b5e', h: '#6fe0c8' }],
   EYE_OF_ENDER: ['orb', { o: '#0a2a1a', c: '#3aa86a', h: '#b8f8d0', p: '#0a1a10' }],
@@ -1678,10 +1846,12 @@ class World {
       if (roll > (biome > 0.38 ? 0.04 : biome < -0.42 ? 0.006 : biome > 0.18 ? 0.025 : 0.012)) continue;
       const h = this.heightAt(tx, tz);
       if (h <= WATER_LEVEL + 1 || h >= 66) continue;
-      const kind = h >= 50 ? 'spruce' : biome > 0.38 ? 'jungle' : biome < -0.42 ? 'acacia' : biome > 0.18 ? 'dark_oak' : hash2(tx, tz, this.seed + 4) < 0.3 ? 'birch' : 'oak';
+      const cherry = n.noise2(tx / 160 - 700, tz / 160 + 250) > 0.5;   // Kirschhaine
+      const kind = h >= 50 ? 'spruce' : biome > 0.38 ? 'jungle' : biome < -0.42 ? 'acacia' : biome > 0.18 ? 'dark_oak' : cherry ? 'cherry' : hash2(tx, tz, this.seed + 4) < 0.3 ? 'birch' : 'oak';
       const [log, leaf, baseH] = {
         spruce: [B.SPRUCE_LOG, B.SPRUCE_LEAVES, 6], birch: [B.BIRCH_LOG, B.BIRCH_LEAVES, 5], oak: [B.LOG, B.LEAVES, 4],
         jungle: [B.JUNGLE_LOG, B.JUNGLE_LEAVES, 7], acacia: [B.ACACIA_LOG, B.ACACIA_LEAVES, 4], dark_oak: [B.DARK_OAK_LOG, B.DARK_OAK_LEAVES, 4],
+        cherry: [B.CHERRY_LOG, B.CHERRY_LEAVES, 4],
       }[kind];
       const trunk = baseH + Math.floor(hash2(tx, tz, this.seed + 2) * 3) + (kind === 'jungle' ? Math.floor(hash2(tx, tz, this.seed + 5) * 4) : 0);
       const topY = h + trunk;
@@ -1902,6 +2072,7 @@ class World {
         for (let t = -1; t <= 1; t++) { const bx = back[0] + (b.out[0] ? 0 : t), bz = back[1] + (b.out[1] ? 0 : t); put(bx, f + 1, bz, B.BOOKSHELF); put(bx, f + 2, bz, B.BOOKSHELF); }
       } else {
         put(back[0] + (b.out[0] ? 0 : 1), f + 1, back[1] + (b.out[1] ? 0 : 1), B.CRAFTING);
+        if (b.kind === 'house') { put(back[0], f + 1, back[1], B.BED_HEAD); put(back[0] + b.out[0], f + 1, back[1] + b.out[1], B.BED_FOOT); }
         if (b.kind === 'big') put(back[0] - (b.out[0] ? 0 : 1), f + 1, back[1] - (b.out[1] ? 0 : 1), B.FURNACE);
         else put(back[0] - (b.out[0] ? 0 : 1), f + 1, back[1] - (b.out[1] ? 0 : 1), B.HAY);
       }
@@ -2100,6 +2271,13 @@ function showFace(id, nid) {
   return true;
 }
 
+// Richtung [dx, dz] vom Fuß- zum Kopfteil eines Betts (über das Nachbarteil bestimmt)
+function bedDir(get, x, y, z, id) {
+  const other = id === B.BED_FOOT ? B.BED_HEAD : B.BED_FOOT, sign = id === B.BED_FOOT ? 1 : -1;
+  for (const [dx, dz] of [[0, 1], [1, 0], [0, -1], [-1, 0]]) if (get(x + dx, y, z + dz) === other) return [dx * sign, dz * sign];
+  return [0, 1];
+}
+
 function buildChunkGeometry(world, cx, cz) {
   const nb = [];
   for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) {
@@ -2166,6 +2344,37 @@ function buildChunkGeometry(world, cx, cz) {
           portal.col.push(1, 1, 1);
         }
         portal.idx.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
+      }
+      continue;
+    }
+    // Bett: flacher Kasten (9/16 hoch), Kissen zeigt zum Kopfende
+    if (isBed(id)) {
+      const dir = bedDir(get, x, y, z, id);   // Richtung zum Kopfende
+      const tiles = BLOCKS[id].tiles, H = 0.5625;
+      for (let f = 0; f < 6; f++) {
+        const face = FACES[f];
+        const [nx, ny, nz] = face.n;
+        if (ny === -1 && OPAQUE[get(x, y - 1, z)]) continue;
+        if (ny === 0 && isBed(get(x + nx, y, z + nz)) && (nx === dir[0] * (id === B.BED_FOOT ? 1 : -1) && nz === dir[1] * (id === B.BED_FOOT ? 1 : -1))) continue;   // Fuge zwischen Kopf- und Fußteil
+        if (ny === 0 && OPAQUE[get(x + nx, y, z + nz)]) continue;
+        const end = ny === 0 && nx === dir[0] && nz === dir[1] || ny === 0 && nx === -dir[0] && nz === -dir[1];
+        const tile = ny === 1 ? tiles[0] : ny === -1 ? tiles[2] : end ? tiles[3] : tiles[1];
+        const base = solid.pos.length / 3, l = LIGHT[f][3];
+        for (const c of face.c) {
+          const cy = c[1] ? H : 0;
+          solid.pos.push(wx0 + x + c[0], y + cy, wz0 + z + c[2]);
+          let u = c[3], v = c[4];
+          if (ny === 1) {
+            // Kachel so drehen, dass ihre Oberkante (v = 1) zum Kopfende zeigt
+            const along = dir[0] ? (dir[0] > 0 ? c[0] : 1 - c[0]) : (dir[1] > 0 ? c[2] : 1 - c[2]);
+            const across = dir[0] ? (dir[0] > 0 ? 1 - c[2] : c[2]) : (dir[1] > 0 ? c[0] : 1 - c[0]);
+            u = across; v = along;
+          } else if (ny === 0) v = c[1] ? H : 0;
+          const [tu, tv] = tileUV(tile, u, v);
+          solid.uv.push(tu, tv);
+          solid.col.push(l, l, l);
+        }
+        solid.idx.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
       }
       continue;
     }
@@ -2423,6 +2632,7 @@ function saveGame() {
       endState,
       dim: world.dim,
       player: { x: player.pos[0], y: player.pos[1], z: player.pos[2], yaw: player.yaw, pitch: player.pitch, flying: player.flying },
+      spawn: player.spawn || null,
       time: dayTime,
       mode: gameMode,
       food: player.food,
@@ -2529,6 +2739,7 @@ const HALF_W = 0.3, PLAYER_H = 1.8, EYE = 1.62;
 const GRAVITY = 28, JUMP = 8.4, WALK = 4.3, SPRINT = 5.8, FLY = 12;
 
 const player = {
+  spawn: Array.isArray(saved?.spawn) ? saved.spawn : null,   // Bett
   pos: [0, 0, 0],
   vel: [0, 0, 0],
   yaw: 0, pitch: 0,
@@ -2585,7 +2796,8 @@ function collides(pos) {
   const y0 = Math.floor(pos[1]), y1 = Math.floor(pos[1] + PLAYER_H);
   const z0 = Math.floor(pos[2] - HALF_W), z1 = Math.floor(pos[2] + HALF_W);
   for (let y = y0; y <= y1; y++) for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) {
-    if (SOLID[world.getBlock(x, y, z)]) return true;
+    const id = world.getBlock(x, y, z);
+    if (SOLID[id] && pos[1] < y + BLOCK_H[id]) return true;
   }
   return false;
 }
@@ -2670,7 +2882,11 @@ function updatePlayer(dt) {
   else if (!player.onGround) player.fallPeak = Math.max(player.fallPeak, p[1]);
   else {
     const fall = player.fallPeak - p[1];
-    if (fall > 3.5) { player.hurtCd = 0; damagePlayer(Math.floor(fall - 3), p[0], p[2], 0, true); }
+    const landed = world.getBlock(Math.floor(p[0]), Math.floor(p[1] - 0.05), Math.floor(p[2]));
+    if (landed === B.SLIME_BLOCK && !down) {
+      // Schleimblock: zurückfedern statt Fallschaden
+      if (fall > 0.6) { v[1] = Math.sqrt(2 * GRAVITY * fall) * 0.8; player.onGround = false; sfx.place(B.SLIME_BLOCK, null); }
+    } else if (fall > 3.5) { player.hurtCd = 0; damagePlayer(Math.floor(fall - 3), p[0], p[2], 0, true); }
     player.fallPeak = p[1];
   }
   // Am Wasserrand automatisch herausklettern
@@ -3028,14 +3244,17 @@ function moveBox(p, hw, h, axis, delta) {
   const z0 = Math.floor(p[2] - hw), z1 = Math.floor(p[2] + hw);
   let hit = false, best = delta > 0 ? Infinity : -Infinity;
   for (let y = y0; y <= y1; y++) for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) {
-    if (!SOLID[world.getBlock(x, y, z)]) continue;
+    const id = world.getBlock(x, y, z);
+    if (!SOLID[id]) continue;
+    const top = y + BLOCK_H[id];
+    if (p[1] >= top - 1e-3) continue;   // steht auf einem niedrigen Block (Bett)
     hit = true;
     const c = axis === 0 ? x : axis === 1 ? y : z;
-    best = delta > 0 ? Math.min(best, c) : Math.max(best, c);
+    best = delta > 0 ? Math.min(best, c) : Math.max(best, axis === 1 ? top : c + 1);
   }
   if (!hit) return false;
   const lo = axis === 1 ? 0 : hw, hi = axis === 1 ? h : hw;
-  p[axis] = delta > 0 ? best - hi - 1e-4 : best + 1 + lo + 1e-4;
+  p[axis] = delta > 0 ? best - hi - 1e-4 : best + lo + 1e-4;
   return true;
 }
 
@@ -4255,6 +4474,7 @@ function damagePlayer(amount, fromX, fromZ, knock = 6, bypassArmor = false) {
   player.hp -= amount;
   player.hurtCd = 0.5;
   sfx.hurt();
+  wakeUp();
   player.regenTimer = 0;
   if (knock) {
     const dx = player.pos[0] - fromX, dz = player.pos[2] - fromZ, l = Math.hypot(dx, dz) || 1;
@@ -4368,6 +4588,7 @@ function updateHunger(dt, sprinting) {
 
 function die() {
   sfx.death();
+  wakeUp();
   player.dead = true;
   player.fire = 0;
   player.portalTimer = 0;
@@ -4402,7 +4623,7 @@ function respawn() {
   renderFood();
   player.vel = [0, 0, 0];
   if (world !== overworld) switchWorld(overworld);
-  player.pos = findSpawn();
+  player.pos = bedSpawn() || findSpawn();
   preloadAround();
   player.fallPeak = player.pos[1];
   deathEl.style.display = 'none';
@@ -4703,6 +4924,7 @@ function breakBlock() {
   else if (id === B.OBSIDIAN) for (const [dx, dy, dz] of SIX) breakPortalAt(x + dx, y + dy, z + dz);
   else if (id === B.LEAVES && survival && Math.random() < 0.08) drops.push(new Drop(I.APPLE, 1, x + 0.5, y + 0.3, z + 0.5));
   if (id === B.FURNACE || id === B.FURNACE_LIT) removeFurnace(x, y, z);
+  if (isBed(id)) removeBedPartner(x, y, z, id);
   const drop = blockDrop(id);
   if (drop && survival && canHarvest(id, heldItem()?.id)) drops.push(new Drop(drop[0], drop[1], x + 0.5, y + 0.3, z + 0.5));
   if (survival) { player.exhaustion += 0.005; if (HARDNESS[id] > 0) damageHeld(1); }
@@ -4751,12 +4973,24 @@ for (const id of [B.GRASS, B.DIRT, B.SNOW, B.SAND, B.GRAVEL, B.CLAY, B.SOUL_SAND
 for (const id of [B.LEAVES, B.BIRCH_LEAVES, B.SPRUCE_LEAVES, B.JUNGLE_LEAVES, B.ACACIA_LEAVES, B.DARK_OAK_LEAVES, B.HAY, B.SPONGE, B.MOSS_BLOCK, B.SHROOMLIGHT]) TOOL_FOR[id] = 'hoe';
 TOOL_FOR[B.ANCIENT_DEBRIS] = TOOL_FOR[B.NETHERITE_BLOCK] = 'pickaxe';
 HARDNESS[B.ANCIENT_DEBRIS] = 30;
+Object.assign(HARDNESS, {
+  [B.BED_FOOT]: 0.2, [B.BED_HEAD]: 0.2, [B.CHERRY_LOG]: 2, [B.CHERRY_PLANKS]: 2, [B.CHERRY_LEAVES]: 0.2, [B.MANGROVE_PLANKS]: 2, [B.BAMBOO_PLANKS]: 2,
+  [B.CRIMSON_PLANKS]: 2, [B.WARPED_PLANKS]: 2, [B.CRIMSON_NYLIUM]: 0.4, [B.WARPED_NYLIUM]: 0.4, [B.NETHER_WART_BLOCK]: 1, [B.WARPED_WART_BLOCK]: 1,
+  [B.RED_NETHER_BRICKS]: 2, [B.QUARTZ_BRICKS]: 0.8, [B.QUARTZ_PILLAR]: 0.8, [B.SMOOTH_SANDSTONE]: 2, [B.CHISELED_SANDSTONE]: 0.8, [B.PURPUR_PILLAR]: 1.5,
+  [B.PACKED_ICE]: 0.5, [B.BLUE_ICE]: 2.8, [B.HONEYCOMB_BLOCK]: 0.6, [B.SLIME_BLOCK]: 0, [B.OXIDIZED_COPPER]: 3, [B.CUT_COPPER]: 3, [B.COAL_BLOCK]: 5,
+  [B.RAW_IRON_BLOCK]: 5, [B.RAW_GOLD_BLOCK]: 5, [B.DEEPSLATE_TILES]: 3.5, [B.REDSTONE_LAMP]: 0.3, [B.OCHRE_FROGLIGHT]: 0.3, [B.RED_MUSHROOM_BLOCK]: 0.2,
+});
+for (const id of [B.BED_FOOT, B.BED_HEAD, B.CHERRY_LOG, B.CHERRY_PLANKS, B.MANGROVE_PLANKS, B.BAMBOO_PLANKS, B.CRIMSON_PLANKS, B.WARPED_PLANKS, B.RED_MUSHROOM_BLOCK]) TOOL_FOR[id] = 'axe';
+for (const id of [B.CRIMSON_NYLIUM, B.WARPED_NYLIUM, B.RED_NETHER_BRICKS, B.QUARTZ_BRICKS, B.QUARTZ_PILLAR, B.SMOOTH_SANDSTONE, B.CHISELED_SANDSTONE, B.PURPUR_PILLAR,
+                  B.PACKED_ICE, B.BLUE_ICE, B.OXIDIZED_COPPER, B.CUT_COPPER, B.COAL_BLOCK, B.RAW_IRON_BLOCK, B.RAW_GOLD_BLOCK, B.DEEPSLATE_TILES]) TOOL_FOR[id] = 'pickaxe';
+for (const id of [B.CHERRY_LEAVES, B.NETHER_WART_BLOCK, B.WARPED_WART_BLOCK]) TOOL_FOR[id] = 'hoe';
 HARDNESS[B.NETHERITE_BLOCK] = 50;
 // Mindest-Spitzhacke, damit etwas fällt (1 = Holz, 2 = Stein, 3 = Eisen, 4 = Diamant)
 const NEED_TIER = {
   [B.IRON_ORE]: 2, [B.LAPIS_ORE]: 2, [B.IRON_BLOCK]: 2, [B.LAPIS_BLOCK]: 2,
   [B.GOLD_ORE]: 3, [B.DIAMOND_ORE]: 3, [B.EMERALD_ORE]: 3, [B.REDSTONE_ORE]: 3, [B.GOLD_BLOCK]: 3, [B.DIAMOND_BLOCK]: 3, [B.EMERALD_BLOCK]: 3, [B.REDSTONE_BLOCK]: 3,
   [B.OBSIDIAN]: 4, [B.COPPER_BLOCK]: 2, [B.ANCIENT_DEBRIS]: 4, [B.NETHERITE_BLOCK]: 4,
+  [B.OXIDIZED_COPPER]: 2, [B.CUT_COPPER]: 2, [B.RAW_IRON_BLOCK]: 2, [B.RAW_GOLD_BLOCK]: 3,
 };
 function canHarvest(blockId, heldId) {
   const need = NEED_TIER[blockId] ?? (TOOL_FOR[blockId] === 'pickaxe' && blockId !== B.ICE && blockId !== B.GLOWSTONE ? 1 : 0);
@@ -4791,8 +5025,9 @@ const BLOCK_DROPS = {
   [B.GRASS]: B.DIRT, [B.SNOW]: B.DIRT, [B.PODZOL]: B.DIRT, [B.DEEPSLATE]: B.COBBLED_DEEPSLATE, [B.STONE]: B.COBBLE, [B.FURNACE_LIT]: B.FURNACE, [B.END_FRAME_EYE]: B.END_FRAME,
   [B.COAL_ORE]: I.COAL, [B.DIAMOND_ORE]: I.DIAMOND, [B.EMERALD_ORE]: I.EMERALD, [B.NETHER_QUARTZ_ORE]: I.QUARTZ,
   [B.REDSTONE_ORE]: [I.REDSTONE, 4], [B.LAPIS_ORE]: [I.LAPIS, 5], [B.NETHER_GOLD_ORE]: [I.GOLD_NUGGET, 3],
+  [B.BED_FOOT]: I.BED, [B.BED_HEAD]: I.BED, [B.CRIMSON_NYLIUM]: B.NETHERRACK, [B.WARPED_NYLIUM]: B.NETHERRACK,
 };
-const NO_DROP = new Set([B.FIRE, B.END_PORTAL, B.WATER, B.LAVA, B.BEDROCK, B.GLASS, B.ICE, B.LEAVES, B.BIRCH_LEAVES, B.SPRUCE_LEAVES, B.JUNGLE_LEAVES, B.ACACIA_LEAVES, B.DARK_OAK_LEAVES, B.PORTAL_X, B.PORTAL_Z]);
+const NO_DROP = new Set([B.FIRE, B.END_PORTAL, B.WATER, B.LAVA, B.BEDROCK, B.GLASS, B.ICE, B.LEAVES, B.BIRCH_LEAVES, B.SPRUCE_LEAVES, B.JUNGLE_LEAVES, B.ACACIA_LEAVES, B.DARK_OAK_LEAVES, B.PORTAL_X, B.PORTAL_Z, B.CHERRY_LEAVES]);
 function blockDrop(id) {
   if (NO_DROP.has(id)) return null;
   if (id === B.GRAVEL && Math.random() < 0.1) return [I.FLINT, 1];
@@ -4801,8 +5036,10 @@ function blockDrop(id) {
 }
 
 // ---------- Rezepte für die Werkbank ----------
-const ANY_PLANKS = [B.PLANKS, B.BIRCH_PLANKS, B.SPRUCE_PLANKS, B.JUNGLE_PLANKS, B.ACACIA_PLANKS, B.DARK_OAK_PLANKS];
-const ANY_LOG = [B.LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG];
+const ANY_PLANKS = [B.PLANKS, B.BIRCH_PLANKS, B.SPRUCE_PLANKS, B.JUNGLE_PLANKS, B.ACACIA_PLANKS, B.DARK_OAK_PLANKS,
+  B.CHERRY_PLANKS, B.MANGROVE_PLANKS, B.BAMBOO_PLANKS, B.CRIMSON_PLANKS, B.WARPED_PLANKS];
+const ANY_LOG = [B.LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.JUNGLE_LOG, B.ACACIA_LOG, B.DARK_OAK_LOG, B.CHERRY_LOG];
+const ANY_WOOL = WOOL_COLORS.map((_, i) => 54 + i);
 const RECIPES = [
   { shapeless: [[B.LOG]], out: [B.PLANKS, 4] },
   { shapeless: [[B.BIRCH_LOG]], out: [B.BIRCH_PLANKS, 4] },
@@ -4827,6 +5064,22 @@ const RECIPES = [
   { shape: ['##', '##'], key: { '#': [I.QUARTZ] }, out: [B.QUARTZ, 1] },
   { shapeless: [[B.PUMPKIN], [B.GLOWSTONE]], out: [B.JACK_O_LANTERN, 1] },
   { shapeless: [[B.HAY]], out: [I.BREAD, 3] },
+  { shape: ['WWW', 'PPP'], key: { W: ANY_WOOL, P: ANY_PLANKS }, out: [I.BED, 1] },
+  { shapeless: [[B.CHERRY_LOG]], out: [B.CHERRY_PLANKS, 4] },
+  { shape: ['##', '##'], key: { '#': [B.QUARTZ] }, out: [B.QUARTZ_BRICKS, 4] },
+  { shape: ['#', '#'], key: { '#': [B.QUARTZ] }, out: [B.QUARTZ_PILLAR, 2] },
+  { shape: ['#', '#'], key: { '#': [B.SANDSTONE] }, out: [B.CHISELED_SANDSTONE, 1] },
+  { shape: ['#', '#'], key: { '#': [B.PURPUR] }, out: [B.PURPUR_PILLAR, 2] },
+  { shape: ['###', '###', '###'], key: { '#': [B.ICE] }, out: [B.PACKED_ICE, 1] },
+  { shape: ['###', '###', '###'], key: { '#': [B.PACKED_ICE] }, out: [B.BLUE_ICE, 1] },
+  { shape: ['###', '###', '###'], key: { '#': [I.COAL] }, out: [B.COAL_BLOCK, 1] },
+  { shapeless: [[B.COAL_BLOCK]], out: [I.COAL, 9] },
+  { shape: ['###', '###', '###'], key: { '#': [B.IRON_ORE] }, out: [B.RAW_IRON_BLOCK, 1] },
+  { shape: ['###', '###', '###'], key: { '#': [B.GOLD_ORE] }, out: [B.RAW_GOLD_BLOCK, 1] },
+  { shape: ['##', '##'], key: { '#': [B.COPPER_BLOCK] }, out: [B.CUT_COPPER, 4] },
+  { shapeless: [[B.NETHER_BRICKS], [B.NETHER_WART_BLOCK]], out: [B.RED_NETHER_BRICKS, 2] },
+  { shape: ['##', '##'], key: { '#': [B.DEEPSLATE_BRICKS] }, out: [B.DEEPSLATE_TILES, 4] },
+  { shape: [' R ', 'RGR', ' R '], key: { R: [I.REDSTONE], G: [B.GLOWSTONE] }, out: [B.REDSTONE_LAMP, 1] },
   { shapeless: [[I.ENDER_PEARL], [B.GLOWSTONE]], out: [I.EYE_OF_ENDER, 1] },
   ...TOOL_MATS.flatMap(([mat], mi) => {
     const M = [ANY_PLANKS, [B.COBBLE], [I.IRON_INGOT], [I.GOLD_INGOT], [I.DIAMOND]][mi];
@@ -4911,6 +5164,7 @@ function recipeCells(r) {
 // ---------- Ofen: Schmelzen und Braten ----------
 const SMELT_TIME = 5;   // Sekunden pro Gegenstand
 const SMELT = {
+  [B.SANDSTONE]: B.SMOOTH_SANDSTONE, [B.RAW_IRON_BLOCK]: B.IRON_BLOCK, [B.RAW_GOLD_BLOCK]: B.GOLD_BLOCK, [B.COPPER_BLOCK]: B.OXIDIZED_COPPER,
   [I.PORKCHOP]: I.COOKED_PORKCHOP, [I.BEEF]: I.STEAK, [I.MUTTON]: I.COOKED_MUTTON, [I.CHICKEN]: I.COOKED_CHICKEN,
   [B.IRON_ORE]: I.IRON_INGOT, [B.GOLD_ORE]: I.GOLD_INGOT, [B.NETHER_GOLD_ORE]: I.GOLD_INGOT,
   [B.DIAMOND_ORE]: I.DIAMOND, [B.EMERALD_ORE]: I.EMERALD, [B.COAL_ORE]: I.COAL, [B.REDSTONE_ORE]: I.REDSTONE,
@@ -5056,9 +5310,95 @@ function canEat(id) {
   const it = ITEMS[id];
   return !!it?.food && (it.always || (isSurvival() ? player.food < 20 : player.hp < MAX_HP));
 }
+// ---------- Betten: aufstellen, schlafen, Wiedereinstiegspunkt ----------
+function placeBed() {
+  if (!target) return;
+  const x = target.x + target.nx, y = target.y + target.ny, z = target.z + target.nz;
+  // Kopfteil in Blickrichtung
+  const fx = -Math.sin(player.yaw), fz = -Math.cos(player.yaw);
+  const [dx, dz] = Math.abs(fx) > Math.abs(fz) ? [Math.sign(fx), 0] : [0, Math.sign(fz)];
+  const free = (bx, by, bz) => { const id = world.getBlock(bx, by, bz); return id === B.AIR || FLUID[id]; };
+  if (!free(x, y, z) || !free(x + dx, y, z + dz) || !SOLID[world.getBlock(x, y - 1, z)] || !SOLID[world.getBlock(x + dx, y - 1, z + dz)]) {
+    showName('Hier ist kein Platz für ein Bett');
+    return;
+  }
+  const p = player.pos;
+  for (const [bx, bz] of [[x, z], [x + dx, z + dz]]) {
+    if (bx + 1 > p[0] - HALF_W && bx < p[0] + HALF_W && y + 0.5625 > p[1] && y < p[1] + PLAYER_H && bz + 1 > p[2] - HALF_W && bz < p[2] + HALF_W) return;
+  }
+  world.setBlock(x, y, z, B.BED_FOOT);
+  world.setBlock(x + dx, y, z + dz, B.BED_HEAD);
+  remeshAround(x, z); remeshAround(x + dx, z + dz);
+  sfx.place(B.BED_FOOT, [x + 0.5, y + 0.5, z + 0.5]);
+  consumeHeld();
+  scheduleSave();
+}
+function removeBedPartner(x, y, z, id) {
+  const dir = bedDir((a, b, c) => world.getBlock(a, b, c), x, y, z, id);
+  const s = id === B.BED_FOOT ? 1 : -1, px = x + dir[0] * s, pz = z + dir[1] * s;
+  if (isBed(world.getBlock(px, y, pz))) { world.setBlock(px, y, pz, B.AIR); remeshAround(px, pz); }
+}
+let sleeping = null;   // { t } während man schläft
+function useBed(x, y, z) {
+  if (world.dim !== 'overworld') {
+    // wie in Minecraft: Betten explodieren im Nether und im End
+    world.setBlock(x, y, z, B.AIR);
+    removeBedPartner(x, y, z, B.BED_FOOT); removeBedPartner(x, y, z, B.BED_HEAD);
+    remeshAround(x, z);
+    explode(x + 0.5, y + 0.5, z + 0.5, 4);
+    showName('Betten funktionieren hier nicht!');
+    return;
+  }
+  player.spawn = [x, y, z];
+  if (dayTime < 0.47 || dayTime > 0.98) { showName('Wiedereinstiegspunkt gesetzt. Schlafen kannst du nur nachts'); scheduleSave(); return; }
+  const near = mobs.some(m => m.def.hostile && m.alive && Math.hypot(m.pos[0] - x, m.pos[1] - y, m.pos[2] - z) < 8);
+  if (near && !peaceful) { showName('Du kannst jetzt nicht schlafen, Monster sind in der Nähe'); return; }
+  sleeping = { t: 0, x, y, z };
+  player.vel = [0, 0, 0];
+  resetInput();
+  showName('Gute Nacht …');
+  scheduleSave();
+}
+function updateSleep(dt) {
+  if (!sleeping) return;
+  sleeping.t += dt;
+  sleepEl.style.opacity = Math.min(1, sleeping.t / 1.5);
+  // auf dem Bett liegen
+  player.vel = [0, 0, 0];
+  player.pos = [sleeping.x + 0.5, sleeping.y + 0.5625, sleeping.z + 0.5];
+  if (sleeping.t >= 2.5) {
+    dayTime = 0.01;   // Morgen
+    sleeping = null;
+    sleepEl.style.opacity = 0;
+    showName('Guten Morgen!');
+    if (isSurvival()) player.hp = Math.min(MAX_HP, player.hp + 4);
+    renderHealth();
+    scheduleSave();
+  }
+}
+function wakeUp() {
+  if (!sleeping) return;
+  sleeping = null;
+  sleepEl.style.opacity = 0;
+}
+// Wiedereinstieg am Bett, falls es noch steht
+function bedSpawn() {
+  const s = player.spawn;
+  if (!s) return null;
+  overworld.ensureChunk(s[0] >> 4, s[2] >> 4);
+  if (!isBed(overworld.getBlock(s[0], s[1], s[2]))) { player.spawn = null; showName('Dein Bett fehlt – du startest am Weltanfang'); return null; }
+  for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]]) {
+    const x = s[0] + dx, z = s[2] + dz;
+    if (!SOLID[overworld.getBlock(x, s[1], z)] && !SOLID[overworld.getBlock(x, s[1] + 1, z)] && SOLID[overworld.getBlock(x, s[1] - 1, z)]) return [x + 0.5, s[1] + 0.01, z + 0.5];
+  }
+  return [s[0] + 0.5, s[1] + 0.6, s[2] + 0.5];
+}
+
 function startSecondary() {
   updateTarget();
   if (targetMob?.def.villager && targetMob.alive) { sfx.villager('idle', targetMob.pos); openInventory('trade', targetMob); return; }
+  if (target && isBed(target.id)) { useBed(target.x, target.y, target.z); return; }
+  if (heldItem()?.id === I.BED) { placeBed(); return; }
   if (target?.id === B.CRAFTING) { openInventory('crafting'); return; }
   if (target?.id === B.FURNACE || target?.id === B.FURNACE_LIT) { openInventory('furnace', furnaceAt(target.x, target.y, target.z)); return; }
   const held = heldItem();
@@ -5119,6 +5459,7 @@ function updateEating(dt) {
 
 function pickBlock() {
   if (!target || target.id === B.BEDROCK || isSurvival()) return;
+  if (isBed(target.id)) target = { ...target, id: I.BED };
   const i = inventory.slice(0, 9).findIndex(s => s && s.id === target.id);
   if (i >= 0) { selectSlot(i); return; }
   const old = inventory[selectedSlot];
@@ -5328,6 +5669,7 @@ const paletteEl = document.getElementById('palette');
 const invMainEl = document.getElementById('inv-main');
 const invBarEl = document.getElementById('inv-hotbar');
 const cursorEl = document.getElementById('cursor');
+const sleepEl = document.getElementById('sleep');
 const invItemEl = document.getElementById('inv-item');
 let invOpen = false, invTab = 'bauen', invSearch = '', cursor = null;
 let invMode = 'inventory';                  // 'inventory' | 'crafting' | 'furnace'
@@ -6017,7 +6359,7 @@ preloadAround();
 spawnEndEntities();
 setGameMode(gameMode);
 // Zugriff für Tests/Entwicklung: index.html?debug
-if (new URLSearchParams(location.search).has('debug')) window.blockwelt = { mobs, Mob, player, get world() { return world; }, overworld, nether, end, endState, travelEnd, placeFire, fires, crystals, pearls, travel, fireballs, shootFireball, damagePlayer, inventory, addItem, drops, Drop, I, B, ITEMS, openInventory, closeInventory, primeTNT, meshChunk, BLOCK_ORDER, setGameMode, armor, armorStats, breakTime, canHarvest, get gameMode() { return gameMode; }, furnaces, RECIPES, craftGrid, matchRecipe, get target() { return target; }, nearestVillage, sfx, get tradeMob() { return tradeMob; }, VILLAGER_PROFS };
+if (new URLSearchParams(location.search).has('debug')) window.blockwelt = { mobs, Mob, player, get world() { return world; }, overworld, nether, end, endState, travelEnd, placeFire, fires, crystals, pearls, travel, fireballs, shootFireball, damagePlayer, inventory, addItem, drops, Drop, I, B, ITEMS, openInventory, closeInventory, primeTNT, meshChunk, BLOCK_ORDER, setGameMode, armor, armorStats, breakTime, canHarvest, get gameMode() { return gameMode; }, furnaces, RECIPES, craftGrid, matchRecipe, get target() { return target; }, get dayTime() { return dayTime; }, set dayTime(v) { dayTime = v; }, useBed, placeBed, bedSpawn, get sleeping() { return sleeping; }, nearestVillage, sfx, get tradeMob() { return tradeMob; }, VILLAGER_PROFS };
 player.fallPeak = player.pos[1];
 renderHealth();
 camera.position.set(player.pos[0], player.pos[1] + EYE, player.pos[2]);
@@ -6032,7 +6374,8 @@ renderer.setAnimationLoop(() => {
 
   updateChunks(dt);
   const running = isActive() && !player.dead && !invOpen;
-  if (running) {
+  if (running && sleeping) { updateSleep(dt); camera.position.set(player.pos[0], player.pos[1] + 0.3, player.pos[2]); }
+  else if (running) {
     updatePlayer(dt);
     updateMobs(dt);
     updateDrops(dt);

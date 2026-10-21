@@ -68,6 +68,28 @@ Die **Dorfbewohner** laufen im Dorf herum und bleiben stehen, wenn du näher kom
 
 Neu ist auch **Brot** (1 Strohballen = 3 Brot in der Werkbank).
 
+### Betten & Schlafen
+
+**Bett** herstellen: 3 Wolle (beliebige Farbe) oben + 3 Holzbretter unten in der Werkbank. Mit Rechtsklick (Touch: 🧱) auf den Boden stellen – das Kopfteil zeigt in deine Blickrichtung. In jedem kleinen Dorfhaus steht auch schon ein Bett.
+
+- **Rechtsklick aufs Bett** setzt deinen **Wiedereinstiegspunkt**: Nach dem Tod wachst du neben deinem Bett auf (solange es noch steht).
+- **Nachts** schläfst du darin ein und wachst am **Morgen** auf (im Überleben mit ein paar Herzen mehr). Sind Monster in der Nähe, kannst du nicht schlafen. Wirst du im Schlaf getroffen, wachst du auf.
+- Wie im echten Minecraft: Im **Nether und End explodieren Betten**!
+
+### 30 neue Blöcke
+
+| Bauen | Natur | Deko |
+|---|---|---|
+| Kirsch-, Mangroven-, Bambus-, Karmesin- und Wirrbretter | Kirschholzstamm und **Kirschblätter** (rosa Kirschhaine in der Welt) | **Redstone-Lampe** (leuchtet) |
+| Glatter und Gemeißelter Sandstein (mit Creeper-Gesicht) | Packeis und Blaueis | Ockerfarbenes Froschlicht (leuchtet) |
+| Quarzziegel, Quarzsäule, Purpursäule | Karmesin-Nyzel und Wirr-Nyzel | Honigwabenblock |
+| Rote Netherziegel, Tiefenschieferfliesen | Netherwarzen- und Wirrwarzenblock | **Schleimblock** – man federt darauf zurück und bekommt keinen Fallschaden |
+| Geschnittener und Oxidierter Kupferblock | Roter Pilzblock | |
+| Kohleblock, Roheisen- und Rohgoldblock | | |
+
+Rezepte (Werkbank): 2×2 Quarzblöcke → 4 Quarzziegel · 2 Quarzblöcke übereinander → 2 Quarzsäulen · 2 Sandstein übereinander → Gemeißelter Sandstein · 2 Purpur übereinander → 2 Purpursäulen · 9 Eis → Packeis · 9 Packeis → Blaueis · 9 Kohle → Kohleblock (und zurück) · 9 Eisen-/Golderz → Roheisen-/Rohgoldblock · 2×2 Kupferblöcke → 4 Geschnittener Kupfer · Netherziegel + Netherwarzenblock → 2 Rote Netherziegel · 2×2 Tiefenschieferziegel → 4 Fliesen · 4 Redstone um Leuchtstein → Redstone-Lampe · Kirschholzstamm → 4 Kirschholzbretter.
+Ofen: Sandstein → Glatter Sandstein · Roheisen-/Rohgoldblock → Eisen-/Goldblock · Kupferblock → Oxidierter Kupferblock.
+
 ### Sound & Musik
 
 Alle Geräusche werden live im Browser erzeugt (keine Audiodateien): Abbauen, Setzen und Schritte klingen je nach Material (Stein, Holz, Erde, Sand, Kies, Glas, Laub, Wolle) verschieden. Dazu kommen Tiergeräusche (Schwein, Kuh, Schaf, Huhn), Zombies, Creeper-Zischen, Endermen, Ghasts, der Enderdrache und das „Hrmm“ der Dorfbewohner. Außerdem Explosionen, Essen, Aufsammeln, Platschen, Feuerzeug, Portale, Schaden und ruhige Klaviermusik ab und zu. Im Menü lassen sich **🔊 Sound** und **🎵 Musik** getrennt ein- und ausschalten.
