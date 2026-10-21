@@ -50,7 +50,7 @@ Helm, Brustpanzer, Beinschutz und Stiefel aus **Leder, Ketten, Eisen, Gold, Diam
 
 - Unendliche, prozedural generierte Welt (Simplex-Noise mit Seed): Wiesen, Berge mit Schneegipfeln, Strände, Seen und Meere, Höhlen
 - Bäume, die über Chunk-Grenzen hinweg wachsen
-- **Hochauflösende 32×32-Pixel-Texturen** für alle Blöcke und Mobs
+- **Hochauflösende 128×128-Pixel-Texturen** für alle Blöcke (Mobs mit 64×64), mit Mipmaps gegen Flimmern in der Ferne
 - Über 150 Blöcke, u. a. Tropen-, Akazien- und Schwarzeichenholz, polierte Steine, Steinziegel-Varianten, Tiefenschiefer, Tuffstein, Calcit, Basalt, Schwarzstein, Prismarin, Seelaterne, Pilzlicht, Amethyst, Kupfer, Moos, Schwamm, Schlammziegel, Plattenspieler, Notenblock, 16 Farben Beton und 16 Farben Keramik. Dazu Erze (Kohle, Eisen, Gold, Redstone, Lapislazuli, Diamant, Smaragd), Edelsteinblöcke, Birke & Fichte, Bücherregal, Werkbank, Ofen, TNT, Kürbisse, Leuchtstein, 16 Wollfarben und mehr
 - Auswahl & Inventar (Taste E bzw. 🎒): jeden Block und jedes Item aus der Auswahl nehmen und in Leiste/Rucksack legen
 - Tiere droppen Beute (Fleisch, Leder, Wolle, Federn), Zombies verrottetes Fleisch, Creeper Schwarzpulver – einfach drüberlaufen zum Einsammeln

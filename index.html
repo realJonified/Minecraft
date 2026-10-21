@@ -309,7 +309,7 @@ const TILE_NAMES = [
   ...WOOL_COLORS.map(w => 'terracotta_' + w[0]),
 ];
 const T = Object.fromEntries(TILE_NAMES.map((n, i) => [n, i]));
-const TILE_PX = 32;                       // Auflösung einer Blocktextur
+const TILE_PX = 128;                      // Auflösung einer Blocktextur (128×128 Pixel)
 const ATLAS_COLS = 16, ATLAS_ROWS = 16;
 const CONCRETE_COLORS = { white: '#cfd5d6', orange: '#e06101', magenta: '#a9309f', light_blue: '#2489c7', yellow: '#f1af15', lime: '#5ea918', pink: '#d5658e', gray: '#36393d',
   light_gray: '#7d7d73', cyan: '#157788', purple: '#64209c', blue: '#2c2e8f', brown: '#603b1f', green: '#495b24', red: '#8e2121', black: '#080a0f' };
@@ -593,9 +593,12 @@ function mulberry32(a) {
 
 // ---------- Textur-Atlas: alle Kacheln werden hier Pixel für Pixel gezeichnet ----------
 function makeAtlas() {
-  const S = TILE_PX, E = S - 1, M = (S - 1) / 2;   // 32×32 Pixel pro Kachel
+  // Entworfen wird im 32er-Raster (S), gezeichnet in voller Auflösung (R = 128):
+  // Rauschen, Zellen und Zufallsfarben werden pro echtem Pixel berechnet.
+  const S = 32, R = TILE_PX, U = R / S, E = S - 1, M = (S - 1) / 2;
+  let SX = 0, SY = 0;   // Unterpixel-Position innerhalb des 32er-Rasters
   const canvas = document.createElement('canvas');
-  canvas.width = S * ATLAS_COLS; canvas.height = S * ATLAS_ROWS;
+  canvas.width = R * ATLAS_COLS; canvas.height = R * ATLAS_ROWS;
   const ctx = canvas.getContext('2d');
   const img = ctx.createImageData(canvas.width, canvas.height);
   const rnd = mulberry32(1337);
@@ -605,11 +608,12 @@ function makeAtlas() {
   const CLEAR = [0, 0, 0, 0];
 
   const tile = (name, fn) => {
-    const t = T[name], ox = (t % ATLAS_COLS) * S, oy = Math.floor(t / ATLAS_COLS) * S;
-    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) {
-      let c = fn(x, y);
+    const t = T[name], ox = (t % ATLAS_COLS) * R, oy = Math.floor(t / ATLAS_COLS) * R;
+    for (let ny = 0; ny < R; ny++) for (let nx = 0; nx < R; nx++) {
+      SX = nx % U; SY = ny % U;
+      let c = fn((nx / U) | 0, (ny / U) | 0);
       if (typeof c === 'string') c = hex(c);
-      const i = ((oy + y) * canvas.width + ox + x) * 4;
+      const i = ((oy + ny) * canvas.width + ox + nx) * 4;
       img.data[i] = Math.max(0, Math.min(255, c[0]));
       img.data[i + 1] = Math.max(0, Math.min(255, c[1]));
       img.data[i + 2] = Math.max(0, Math.min(255, c[2]));
@@ -621,7 +625,7 @@ function makeAtlas() {
     const g = Array.from({ length: cx * cy }, () => rnd());
     const at = (i, j) => g[((j % cy + cy) % cy) * cx + ((i % cx + cx) % cx)];
     return (x, y) => {
-      const gx = (x + 0.5) / S * cx, gy = (y + 0.5) / S * cy;
+      const gx = (x * U + SX + 0.5) / R * cx, gy = (y * U + SY + 0.5) / R * cy;
       const x0 = Math.floor(gx), y0 = Math.floor(gy);
       const fx = gx - x0, fy = gy - y0;
       const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
@@ -631,13 +635,19 @@ function makeAtlas() {
     };
   };
   const pick = (pal, v) => pal[Math.max(0, Math.min(pal.length - 1, Math.floor(v * pal.length)))];
-  const noisy = (pal, cells = 8, mix = 0.5) => { const n = vnoise(cells); return (x, y) => pick(pal, n(x, y) * (1 - mix) + rnd() * mix); };
+  const noisy = (pal, cells = 8, mix = 0.5) => {
+    const n = vnoise(cells), fine = vnoise(cells * 4);
+    return (x, y) => pick(pal, n(x, y) * (1 - mix) + (fine(x, y) * 0.6 + rnd() * 0.4) * mix);
+  };
   const voronoi = (count) => {
     const pts = Array.from({ length: count }, () => [rnd() * S, rnd() * S, rnd()]);
     return (x, y) => {
+      const X = x + (SX + 0.5) / U, Y = y + (SY + 0.5) / U;
       let d1 = 1e9, d2 = 1e9, best = null;
-      for (const p of pts) for (let ox = -S; ox <= S; ox += S) for (let oy = -S; oy <= S; oy += S) {
-        const dx = x + 0.5 - p[0] - ox, dy = y + 0.5 - p[1] - oy, d = Math.hypot(dx, dy);
+      for (const p of pts) {
+        let dx = X - p[0], dy = Y - p[1];
+        dx -= S * Math.round(dx / S); dy -= S * Math.round(dy / S);   // kachelbar
+        const d = Math.hypot(dx, dy);
         if (d < d1) { d2 = d1; d1 = d; best = { p, dx, dy }; } else if (d < d2) d2 = d;
       }
       return { cell: best.p, dx: best.dx, dy: best.dy, edge: d2 - d1, d: d1 };
@@ -801,11 +811,12 @@ function makeAtlas() {
     };
   };
   const leaves = (pal, holes) => {
-    const v = voronoi(26);
+    const v = voronoi(26), salt = ri(100000);
     return (x, y) => {
       const c = v(x, y);
-      if (c.edge < 0.8 && rnd() < holes * 2.2) return CLEAR;
-      if (rnd() < holes * 0.4) return CLEAR;
+      const hr = hash2(x, y, 7919 + salt);   // Löcher pro 32er-Pixel, sonst wird das Laub zum Sieb
+      if (c.edge < 0.8 && hr < holes * 2.2) return CLEAR;
+      if (hash2(x, y, 104729 + salt) < holes * 0.4) return CLEAR;
       const base = pick(pal, c.cell[2] * 0.7 + rnd() * 0.3);
       return mul(base, c.dx + c.dy < -1.5 ? 1.15 : c.dx + c.dy > 1.5 ? 0.82 : 1);
     };
@@ -1222,7 +1233,7 @@ function makeIcon(atlas, id) {
   const c = document.createElement('canvas');
   c.width = c.height = 96;
   const ctx = c.getContext('2d');
-  ctx.imageSmoothingEnabled = false;
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
   const [top, side, , front] = BLOCKS[id].tiles;
   const P = TILE_PX, k = 44 / P, h = 22 / P;
   const face = (t, m, dark) => {
@@ -1869,7 +1880,7 @@ const FACES = [
 const AO_LEVELS = [0.45, 0.62, 0.8, 1.0];
 // Vertex-Farben sind linear, daher Gamma-Korrektur vorberechnen
 const LIGHT = FACES.map(f => AO_LEVELS.map(a => Math.pow(f.shade * a, 2.2)));
-const UV_INSET = 0.01;
+const UV_INSET = 0.015;
 // UV-Koordinaten einer Kachel im Atlas (u, v jeweils 0 oder 1)
 function tileUV(tile, u, v) {
   const col = tile % ATLAS_COLS, row = Math.floor(tile / ATLAS_COLS);
@@ -2022,8 +2033,9 @@ scene.fog = new THREE.Fog(skyColor, fogFar * 0.55, fogFar * 0.95);
 atlasCanvas = makeAtlas();
 const atlas = new THREE.CanvasTexture(atlasCanvas);
 atlas.magFilter = THREE.NearestFilter;
-atlas.minFilter = THREE.NearestFilter;
-atlas.generateMipmaps = false;
+atlas.minFilter = THREE.NearestMipmapLinearFilter;   // Mipmaps gegen Flimmern in der Ferne
+atlas.generateMipmaps = true;
+atlas.anisotropy = renderer.capabilities.getMaxAnisotropy();
 atlas.colorSpace = THREE.SRGBColorSpace;
 
 const solidMat = new THREE.MeshBasicMaterial({ map: atlas, vertexColors: true, alphaTest: 0.5 });
@@ -2495,18 +2507,18 @@ let peaceful = !!saved?.peaceful; // friedlich = keine Monster
 let daylight = 1, lightLin = 1;   // werden in updateSky gesetzt
 
 const texCache = new Map();
-// Mob-Haut: 32×32 Pixel pro Fläche, Gesichter werden im 8er-Raster gezeichnet und vervierfacht
+// Mob-Haut: 64×64 Pixel pro Fläche, Gesichter werden im 8er-Raster gezeichnet und verachtfacht
 function skinTex(key, base, vary, draw) {
   if (texCache.has(key)) return texCache.get(key);
-  const c = document.createElement('canvas'); c.width = c.height = 32;
+  const c = document.createElement('canvas'); c.width = c.height = 64;
   const ctx = c.getContext('2d');
   const rnd = mulberry32([...key].reduce((a, ch) => a * 31 + ch.charCodeAt(0), 7));
-  for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) {
+  for (let y = 0; y < 64; y++) for (let x = 0; x < 64; x++) {
     const k = 1 + (rnd() - 0.5) * vary;
     ctx.fillStyle = `rgb(${base[0] * k | 0},${base[1] * k | 0},${base[2] * k | 0})`;
     ctx.fillRect(x, y, 1, 1);
   }
-  if (draw) { ctx.save(); ctx.scale(4, 4); draw(ctx, rnd); ctx.restore(); }
+  if (draw) { ctx.save(); ctx.scale(8, 8); draw(ctx, rnd); ctx.restore(); }
   const t = new THREE.CanvasTexture(c);
   t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter;
   t.generateMipmaps = false; t.colorSpace = THREE.SRGBColorSpace;
