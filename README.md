@@ -2,6 +2,10 @@
 
 Ein Minecraft-ähnliches Voxel-Spiel, das komplett im Browser läuft (Three.js, eine einzige `index.html`).
 
+## ▶️ Jetzt spielen: **[realjonified.github.io/Minecraft](https://realjonified.github.io/Minecraft/)**
+
+Läuft direkt im Browser auf PC, Handy und Tablet, ohne Installation.
+
 Inspiriert vom Original: **[Minecraft](https://www.minecraft.net/de-de)** von Mojang Studios. BlockWelt ist ein inoffizielles Fan-Projekt und steht in keiner Verbindung zu Mojang oder Microsoft.
 
 ## Starten
