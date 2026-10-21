@@ -30,6 +30,9 @@ python3 -m http.server
 - TNT: abbauen zündet es, Explosionen lösen Kettenreaktionen aus (Obsidian ist sprengsicher)
 - **Der Nether**: Rahmen aus Obsidian bauen (mind. 4×5), mit dem Feuerzeug anzünden, 2 Sekunden reinstellen. Dort warten Netherrack-Höhlen, ein riesiger Lavasee, Seelensand, Magmablöcke, Leuchtstein-Trauben, Netherquarz- und Nethergolderz. Ein Block im Nether entspricht 8 Blöcken in der Oberwelt; auf der anderen Seite wird automatisch ein Portal gebaut
 - Nether-Mobs: Zombifizierte Piglins (friedlich, bis man einen schlägt – dann greift die ganze Gruppe an) und Ghasts, die Feuerbälle schießen. Feuerbälle kann man mit einem Schlag zurückschleudern!
+- **Feuer**: Das Feuerzeug zündet jetzt richtiges Feuer an. Es frisst Holz, Laub, Wolle und Strohballen, springt über und zündet TNT. Auf Netherrack brennt es ewig, Wasser löscht es. Ghast-Feuerbälle setzen den Boden in Brand
+- **Das End**: 12 Endportalrahmen als Ring (5×5 ohne Ecken) legen, in jeden ein Enderauge (Enderperle + Leuchtstein) setzen und ins Portal springen. Dort: schwebende Endstein-Insel über dem Nichts, Obsidian-Säulen mit Endkristallen und der **Enderdrache** mit Bossleiste. Kristalle zerstören (sie heilen den Drachen), Drachen besiegen – dann erscheinen Ausgangsportal und Drachenei
+- **Endermen**: im End und selten nachts in der Oberwelt. Nicht in die Augen schauen! Sie teleportieren sich und droppen Enderperlen, die man werfen kann, um sich zu teleportieren
 - Lava (auch tief in den Höhlen der Oberwelt) setzt dich in Brand – Feuerresistenz vom Verzauberten Goldenen Apfel schützt
 - Erzadern, Granit/Diorit/Andesit, Kies- und Tonböden im Meer, Sandstein unter Stränden
 - Spielerphysik mit Schwerkraft, Springen, Kollision, Schwimmen und Sprinten

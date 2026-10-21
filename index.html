@@ -72,6 +72,10 @@
   #death h1 { color: #ff5a5a; text-shadow: 3px 3px 0 #3a0000; }
   #fire { position: fixed; left: 0; right: 0; bottom: 0; height: 45%; pointer-events: none; display: none; background: linear-gradient(to top, rgba(255,120,0,.75), rgba(255,60,0,.25) 50%, rgba(255,60,0,0)); animation: flicker .25s infinite alternate; }
   @keyframes flicker { from { opacity: .7; } to { opacity: 1; } }
+  #bossbar { position: fixed; top: 10px; left: 50%; transform: translateX(-50%); width: min(60vw, 420px); display: none; pointer-events: none; text-align: center; color: #fff; font-size: 14px; text-shadow: 1px 1px 0 #000; }
+  .boss-track { height: 8px; margin-top: 3px; background: #3a1a40; border: 1px solid #000; }
+  .boss-fill { height: 100%; width: 100%; background: linear-gradient(#ff7aff, #c030c0); }
+  body.touch #bossbar { top: calc(max(8px, env(safe-area-inset-top)) + min(46px, calc((100vw - 150px) / 9)) + 70px); }
   #portalfx { position: fixed; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, rgba(160,70,255,.3), rgba(100,20,190,.95)); }
   #underwater { position: fixed; inset: 0; background: rgba(20, 60, 160, .35); pointer-events: none; display: none; }
 
@@ -119,6 +123,7 @@
 <div id="underwater"></div>
 <div id="fire"></div>
 <div id="portalfx"></div>
+<div id="bossbar"><div class="boss-name">Enderdrache</div><div class="boss-track"><div class="boss-fill"></div></div></div>
 <div id="crosshair"></div>
 <div id="blockname"></div>
 <div id="health"></div>
@@ -150,6 +155,7 @@
       <b>F3</b><span>Debug-Infos</span>
       <b>Esc</b><span>Pause</span>
     </div>
+    <p class="nether-help">🌌 <b>End:</b> Lege 12 Endportalrahmen als Ring (5×5 ohne Ecken), setze in jeden ein Enderauge (Enderperle + Leuchtstein) – dann ins Portal springen und den Enderdrachen besiegen!</p>
     <p class="nether-help">🔥 <b>Nether:</b> Baue einen Rahmen aus Obsidian (mind. 4 breit, 5 hoch), zünde ihn mit dem Feuerzeug (Auswahl → Items) an und stell dich 2 Sekunden hinein.</p>
     <div class="touch-help">
       🕹 Joystick links: laufen (ganz nach vorne = sprinten)<br>
@@ -253,6 +259,7 @@ const TILE_NAMES = [
   'tnt_top', 'tnt_side', 'tnt_bottom', 'gold_block', 'iron_block', 'diamond_block', 'emerald_block', 'redstone_block', 'lapis_block', 'quartz', 'pumpkin_top', 'pumpkin_side', 'pumpkin_face', 'lantern_face', 'melon_top', 'melon_side',
   'hay_top', 'hay_side', 'cactus_top', 'cactus_side', 'cactus_bottom', 'granite', 'diorite', 'andesite',
   'netherrack', 'soul_sand', 'nether_quartz_ore', 'nether_gold_ore', 'nether_bricks', 'magma', 'lava',
+  'end_stone', 'end_stone_bricks', 'purpur', 'end_frame_top', 'end_frame_eye_top', 'end_frame_side', 'dragon_egg',
   ...WOOL_COLORS.map(w => 'wool_' + w[0]),
 ];
 const T = Object.fromEntries(TILE_NAMES.map((n, i) => [n, i]));
@@ -343,6 +350,18 @@ def(76, 'LAVA', 'Lava', ['lava'], { solid: false, opaque: false, glow: true });
 def(77, 'PORTAL_X', 'Netherportal', ['obsidian'], { solid: false, opaque: false });
 def(78, 'PORTAL_Z', 'Netherportal', ['obsidian'], { solid: false, opaque: false });
 def(79, 'FURNACE_LIT', 'Ofen', ['furnace_top', 'furnace_side', 'furnace_top', 'furnace_front_lit'], { glow: true });
+def(80, 'END_STONE', 'Endstein', ['end_stone']);
+def(81, 'END_STONE_BRICKS', 'Endsteinziegel', ['end_stone_bricks']);
+def(82, 'PURPUR', 'Purpurblock', ['purpur']);
+def(83, 'END_FRAME', 'Endportalrahmen', ['end_frame_top', 'end_frame_side', 'end_stone']);
+def(84, 'END_FRAME_EYE', 'Endportalrahmen mit Auge', ['end_frame_eye_top', 'end_frame_side', 'end_stone']);
+def(85, 'END_PORTAL', 'Endportal', ['obsidian'], { solid: false, opaque: false });
+def(86, 'DRAGON_EGG', 'Drachenei', ['dragon_egg']);
+def(87, 'FIRE', 'Feuer', ['lava'], { solid: false, opaque: false });
+// Brennbare Blöcke (Feuer breitet sich darauf aus)
+const FLAMMABLE = new Uint8Array(256);
+for (const id of [B.LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.PLANKS, B.BIRCH_PLANKS, B.SPRUCE_PLANKS, B.LEAVES, B.BIRCH_LEAVES, B.SPRUCE_LEAVES,
+                  B.BOOKSHELF, B.CRAFTING, B.HAY, B.TNT, ...WOOL_COLORS.map((_, i) => 54 + i)]) FLAMMABLE[id] = 1;
 const FLUID = new Uint8Array(256);
 FLUID[B.WATER] = FLUID[B.LAVA] = 1;
 const isPortal = (id) => id === B.PORTAL_X || id === B.PORTAL_Z;
@@ -357,6 +376,7 @@ const BLOCK_ORDER = [
   B.BRICK, B.GLASS, B.GLOWSTONE, B.BOOKSHELF, B.CRAFTING, B.FURNACE, B.TNT,
   B.PUMPKIN, B.JACK_O_LANTERN, B.MELON, B.HAY, B.CACTUS,
   B.NETHERRACK, B.SOUL_SAND, B.NETHER_QUARTZ_ORE, B.NETHER_GOLD_ORE, B.NETHER_BRICKS, B.MAGMA, B.LAVA,
+  B.END_STONE, B.END_STONE_BRICKS, B.PURPUR, B.END_FRAME, B.DRAGON_EGG,
   ...WOOL_COLORS.map((_, i) => 54 + i),
 ];
 
@@ -400,6 +420,8 @@ item(130, 'STONE_SWORD', 'Steinschwert', { damage: 6, stack: 1 });
 item(131, 'IRON_SWORD', 'Eisenschwert', { damage: 7, stack: 1 });
 item(132, 'GOLDEN_SWORD', 'Goldschwert', { damage: 5, stack: 1 });
 item(133, 'DIAMOND_SWORD', 'Diamantschwert', { damage: 8, stack: 1 });
+item(134, 'ENDER_PEARL', 'Enderperle', { stack: 16 });
+item(135, 'EYE_OF_ENDER', 'Enderauge');
 for (const it of Object.values(ITEMS)) it.food = it.heal !== undefined;
 const ITEM_ORDER = Object.keys(ITEMS).map(Number);
 
@@ -828,6 +850,31 @@ function makeAtlas() {
     const n1 = vnoise(4), n2 = vnoise(8);
     tile('lava', (x, y) => pick(['#b8380a', '#cf4a0a', '#e35d0e', '#f07a14', '#fb9a26', '#ffc04a'], n1(x, y) * 0.6 + n2(x, y) * 0.3 + rnd() * 0.1));
   }
+  // ---- End ----
+  const endStone = (() => { const n = noisy(['#cfcf92', '#d9d9a0', '#e0e0a8', '#e8e8b4'], 8, 0.6); return (x, y) => rnd() < 0.06 ? '#b5b57a' : n(x, y); })();
+  tile('end_stone', endStone);
+  tile('end_stone_bricks', (x, y) => {
+    const row = Math.floor(y / 8), bx = (x + (row % 2) * 8) % 16;
+    if (y % 8 === 7 || bx === 15) return '#9e9e6e';
+    return mul(hex(endStone(x, y)), y % 8 === 0 ? 1.08 : 1);
+  });
+  {
+    const n = noisy(['#9a6e9a', '#a77ba7', '#b38bb3'], 6, 0.4);
+    tile('purpur', (x, y) => (x % 8 === 0 || y % 8 === 0) ? '#7a567a' : (x % 8 === 1 || y % 8 === 1) ? '#c8a0c8' : n(x, y));
+  }
+  const frameTop = (eye) => (x, y) => {
+    const d = Math.max(Math.abs(x - 7.5), Math.abs(y - 7.5));
+    if (d > 6.5) return '#c8c89a';
+    if (d > 5.5) return '#3d6b5c';
+    if (d > 3.5) return pick(['#2f5a4c', '#3d6b5c', '#4a7a68'], rnd());
+    if (!eye) return d > 2.5 ? '#1f3a30' : '#0f1f1a';
+    const r = Math.hypot(x - 7.5, y - 7.5);
+    return r < 1.2 ? '#08140e' : (x < 7 && y < 7 && r < 2.5) ? '#b8f8d0' : '#2fa06a';
+  };
+  tile('end_frame_top', frameTop(false));
+  tile('end_frame_eye_top', frameTop(true));
+  tile('end_frame_side', (x, y) => y < 5 ? ((x + y) % 4 === 0 ? '#5a8a78' : pick(['#2f5a4c', '#3d6b5c'], rnd())) : y === 5 ? '#24443a' : endStone(x, y));
+  tile('dragon_egg', (x, y) => rnd() < 0.12 ? pick(['#4a2066', '#6a3090'], rnd()) : pick(['#0c0810', '#140e1a', '#1a1222'], rnd()));
   // ---- Wolle: gewebtes Muster ----
   WOOL_COLORS.forEach(([key, , color]) => {
     const n = vnoise(4), c = hex(color);
@@ -945,11 +992,23 @@ const ITEM_LOOK = {
   IRON_SWORD: ['sword', { o: '#2a2a2a', b: '#ffffff', d: '#c0c0c0', h: '#5a4020', s: '#6b4a26' }],
   GOLDEN_SWORD: ['sword', { o: '#2a2a2a', b: '#fff27a', d: '#e8b520', h: '#5a4020', s: '#6b4a26' }],
   DIAMOND_SWORD: ['sword', { o: '#2a2a2a', b: '#8cf8f0', d: '#2bc7ac', h: '#5a4020', s: '#6b4a26' }],
+  ENDER_PEARL: ['orb', { o: '#0a2a26', c: '#1a6b5e', h: '#6fe0c8' }],
+  EYE_OF_ENDER: ['orb', { o: '#0a2a1a', c: '#3aa86a', h: '#b8f8d0', p: '#0a1a10' }],
 };
 function makeItemCanvas(id) {
   const [art, pal] = ITEM_LOOK[ITEMS[id].key];
   const c = document.createElement('canvas'); c.width = c.height = 16;
   const ctx = c.getContext('2d');
+  if (art === 'orb') {
+    // runde Perle bzw. Auge, direkt berechnet
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) {
+      const d = Math.hypot(x - 7.5, y - 7.5);
+      if (d > 5.6) continue;
+      ctx.fillStyle = pal.p && d < 1.8 ? pal.p : d > 4.7 ? pal.o : (x < 7 && y < 7 && d < 3.6 && d > 1.5) ? pal.h : pal.c;
+      ctx.fillRect(x, y, 1, 1);
+    }
+    return c;
+  }
   ITEM_ART[art].forEach((row, y) => [...row].forEach((ch, x) => {
     if (!pal[ch]) return;
     ctx.fillStyle = pal[ch];
@@ -1059,8 +1118,7 @@ class Chunk {
   constructor(cx, cz) {
     this.cx = cx; this.cz = cz;
     this.data = new Uint8Array(CHUNK * CHUNK * HEIGHT);
-    this.mesh = null;
-    this.waterMesh = null;
+    this.meshes = [];
     this.meshed = false;
   }
 }
@@ -1069,6 +1127,7 @@ class World {
   constructor(seed, mods, dim = 'overworld') {
     this.seed = seed;
     this.dim = dim;
+    this.loadedFires = [];   // gespeicherte Feuer, die beim Laden wieder angefacht werden
     this.noise = new Simplex(seed);
     this.chunks = new Map();
     // Änderungen der Spieler: chunkKey -> Map(lokalerIndex -> blockId)
@@ -1122,6 +1181,7 @@ class World {
 
   generate(chunk) {
     if (this.dim === 'nether') return this.generateNether(chunk);
+    if (this.dim === 'end') return this.generateEnd(chunk);
     const d = chunk.data, n = this.noise;
     const ox = chunk.cx * CHUNK, oz = chunk.cz * CHUNK;
     const S2 = CHUNK * CHUNK;
@@ -1227,9 +1287,17 @@ class World {
       if (h + 1 < HEIGHT && d[idx(x, h, z)] === B.GRASS && d[idx(x, h + 1, z)] === B.AIR) d[idx(x, h + 1, z)] = B.PUMPKIN;
     }
 
-    // gespeicherte Änderungen anwenden
+    this.applyMods(chunk);
+  }
+
+  // gespeicherte Änderungen anwenden (und gespeichertes Feuer merken)
+  applyMods(chunk) {
     const mods = this.mods.get(chunkKey(chunk.cx, chunk.cz));
-    if (mods) for (const [i, id] of mods) d[i] = id;
+    if (!mods) return;
+    for (const [i, id] of mods) {
+      chunk.data[i] = id;
+      if (id === B.FIRE) this.loadedFires.push([chunk.cx * CHUNK + (i & 15), i >> 8, chunk.cz * CHUNK + ((i >> 4) & 15)]);
+    }
   }
 
   // Nether: Höhlenwelt aus Netherrack mit Lavasee, Decke aus Grundgestein und Leuchtstein-Trauben
@@ -1307,8 +1375,61 @@ class World {
       }
     }
 
-    const mods = this.mods.get(chunkKey(chunk.cx, chunk.cz));
-    if (mods) for (const [i, id] of mods) d[i] = id;
+    this.applyMods(chunk);
+  }
+
+  // End: schwebende Endstein-Insel über dem Nichts, Obsidian-Säulen und der Brunnen in der Mitte
+  endColumn(wx, wz) {
+    const n = this.noise, r = Math.hypot(wx, wz);
+    const edge = 60 + n.noise2(wx / 30, wz / 30) * 10;
+    if (r < edge) {
+      const t = 1 - r / edge;
+      return { top: 50 + Math.floor(t * 4 + n.noise2(wx / 20, wz / 20) * 1.5), bottom: Math.floor(50 - t * t * 34 - 2) };
+    }
+    if (r > 110) {
+      // kleinere Außeninseln
+      const v = n.noise2(wx / 50 + 300, wz / 50 - 200);
+      if (v > 0.45) { const t = (v - 0.45) / 0.55; return { top: 48 + Math.floor(t * 6), bottom: Math.floor(48 - t * 14) }; }
+    }
+    return null;
+  }
+  setupEnd() {
+    const rnd = mulberry32(this.seed);
+    this.pillars = Array.from({ length: 10 }, (_, i) => {
+      const a = i / 10 * Math.PI * 2;
+      return { x: Math.round(Math.cos(a) * 38), z: Math.round(Math.sin(a) * 38), r: 2 + Math.floor(rnd() * 3), top: 68 + Math.floor(rnd() * 20) };
+    });
+    this.fountainY = this.endColumn(0, 0).top;
+  }
+  generateEnd(chunk) {
+    const d = chunk.data;
+    const ox = chunk.cx * CHUNK, oz = chunk.cz * CHUNK;
+    const idx = (x, y, z) => x + z * CHUNK + y * CHUNK * CHUNK;
+    for (let z = 0; z < CHUNK; z++) for (let x = 0; x < CHUNK; x++) {
+      const wx = ox + x, wz = oz + z;
+      const col = this.endColumn(wx, wz);
+      if (!col) continue;
+      const top = Math.hypot(wx, wz) <= 4 ? this.fountainY : col.top;
+      for (let y = Math.max(1, col.bottom); y <= top; y++) d[idx(x, y, z)] = B.END_STONE;
+    }
+    for (const pl of this.pillars) {
+      if (pl.x + pl.r < ox || pl.x - pl.r > ox + 15 || pl.z + pl.r < oz || pl.z - pl.r > oz + 15) continue;
+      for (let z = 0; z < CHUNK; z++) for (let x = 0; x < CHUNK; x++) {
+        if (Math.hypot(ox + x - pl.x, oz + z - pl.z) > pl.r + 0.3) continue;
+        for (let y = 30; y <= pl.top; y++) d[idx(x, y, z)] = B.OBSIDIAN;
+      }
+      const lx = pl.x - ox, lz = pl.z - oz;
+      if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) d[idx(lx, pl.top + 1, lz)] = B.BEDROCK;
+    }
+    // Brunnen aus Grundgestein (wird nach dem Sieg über den Drachen zum Ausgangsportal)
+    for (let z = 0; z < CHUNK; z++) for (let x = 0; x < CHUNK; x++) {
+      const wx = ox + x, wz = oz + z, r = Math.hypot(wx, wz);
+      if (r > 3.5) continue;
+      d[idx(x, this.fountainY, z)] = B.BEDROCK;
+      if (r > 2.5) d[idx(x, this.fountainY + 1, z)] = B.BEDROCK;
+      if (wx === 0 && wz === 0) for (let k = 1; k <= 4; k++) d[idx(x, this.fountainY + k, z)] = B.BEDROCK;
+    }
+    this.applyMods(chunk);
   }
 
   serializeMods() {
@@ -1369,11 +1490,37 @@ function buildChunkGeometry(world, cx, cz) {
   const water = { pos: [], uv: [], col: [], idx: [] };
   const glowBuf = { pos: [], uv: [], col: [], idx: [] };
   const portal = { pos: [], uv: [], col: [], idx: [] };
+  const endp = { pos: [], uv: [], col: [], idx: [] };
+  const fire = { pos: [], uv: [], col: [], idx: [] };
   const ao = [0, 0, 0, 0];
 
   for (let y = 0; y < HEIGHT; y++) for (let z = 0; z < CHUNK; z++) for (let x = 0; x < CHUNK; x++) {
     const id = data[x + z * CHUNK + y * CHUNK * CHUNK];
     if (id === B.AIR) continue;
+    // Endportal: sternenübersäte Fläche knapp unter der Blockoberkante
+    if (id === B.END_PORTAL) {
+      const base = endp.pos.length / 3;
+      for (const c of FACES[3].c) {
+        endp.pos.push(wx0 + x + c[0], y + 0.75, wz0 + z + c[2]);
+        endp.uv.push((wx0 + x + c[0]) / 4, (wz0 + z + c[2]) / 4);
+        endp.col.push(1, 1, 1);
+      }
+      endp.idx.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
+      continue;
+    }
+    // Feuer: zwei gekreuzte Flammen-Flächen
+    if (id === B.FIRE) {
+      for (const [ax, az, bx, bz] of [[0, 0, 1, 1], [1, 0, 0, 1]]) {
+        const base = fire.pos.length / 3;
+        for (const [u, v] of [[0, 1], [0, 0], [1, 1], [1, 0]]) {
+          fire.pos.push(wx0 + x + (u ? bx : ax), y + v, wz0 + z + (u ? bz : az));
+          fire.uv.push(u, v);
+          fire.col.push(1, 1, 1);
+        }
+        fire.idx.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
+      }
+      continue;
+    }
     // Netherportal: dünne, leuchtende Fläche in der Blockmitte
     if (isPortal(id)) {
       const ax = id === B.PORTAL_X ? 2 : 0;
@@ -1433,7 +1580,7 @@ function buildChunkGeometry(world, cx, cz) {
       else out.idx.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
     }
   }
-  return { solid, water, glow: glowBuf, portal };
+  return { solid, water, glow: glowBuf, portal, endp, fire };
 }
 
 // ============================================================
@@ -1492,6 +1639,60 @@ function drawPortal(t) {
 }
 drawPortal(0);
 let portalAnim = 0;
+
+// Endportal: dunkler Sternenhimmel, der langsam vorbeizieht
+const endPortalTex = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#04060c'; ctx.fillRect(0, 0, 64, 64);
+  const rnd = mulberry32(99);
+  for (let i = 0; i < 90; i++) {
+    ctx.fillStyle = ['#1f6f6a', '#2fa0a0', '#6a4ab0', '#a0e8e0', '#3a2a80'][Math.floor(rnd() * 5)];
+    ctx.fillRect(Math.floor(rnd() * 64), Math.floor(rnd() * 64), 1 + (rnd() < 0.2 ? 1 : 0), 1);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.generateMipmaps = false;
+  t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+})();
+const endPortalMat = new THREE.MeshBasicMaterial({ map: endPortalTex, side: THREE.DoubleSide });
+
+// Feuer: animierte Flammen-Textur
+const fireCanvas = document.createElement('canvas');
+fireCanvas.width = fireCanvas.height = 16;
+const fireCtx = fireCanvas.getContext('2d');
+const fireImg = fireCtx.createImageData(16, 16);
+const fireTex = new THREE.CanvasTexture(fireCanvas);
+fireTex.magFilter = THREE.NearestFilter; fireTex.minFilter = THREE.NearestFilter;
+fireTex.generateMipmaps = false; fireTex.colorSpace = THREE.SRGBColorSpace;
+const fireMat = new THREE.MeshBasicMaterial({ map: fireTex, alphaTest: 0.4, side: THREE.DoubleSide });
+function drawFire(t) {
+  for (let x = 0; x < 16; x++) {
+    const h = 9 + Math.sin(x * 1.7 + t * 9) * 2.5 + Math.sin(x * 0.6 - t * 5.3) * 2.5 + (x === 0 || x === 15 ? -4 : 0);
+    for (let y = 0; y < 16; y++) {
+      const fromBottom = 15 - y, i = (y * 16 + x) * 4;
+      if (fromBottom > h) { fireImg.data[i + 3] = 0; continue; }
+      const k = fromBottom / Math.max(1, h);
+      fireImg.data[i] = 255; fireImg.data[i + 1] = 230 - k * 170 + Math.sin(t * 20 + x * y) * 20; fireImg.data[i + 2] = 60 - k * 60; fireImg.data[i + 3] = 255;
+    }
+  }
+  fireCtx.putImageData(fireImg, 0, 0);
+  fireTex.needsUpdate = true;
+}
+drawFire(0);
+
+// Sterne (im End immer, in der Oberwelt nachts)
+const stars = (() => {
+  const pos = [], rnd = mulberry32(7);
+  for (let i = 0; i < 900; i++) {
+    const u = rnd() * 2 - 1, a = rnd() * Math.PI * 2, r = Math.sqrt(1 - u * u);
+    pos.push(Math.cos(a) * r * 350, u * 350, Math.sin(a) * r * 350);
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  return new THREE.Points(g, new THREE.PointsMaterial({ color: 0xffffff, size: 2, sizeAttenuation: false, fog: false, transparent: true, depthWrite: false }));
+})();
+scene.add(stars);
 
 // Block-Markierung
 const highlight = new THREE.LineSegments(
@@ -1569,7 +1770,11 @@ const saved = loadSave();
 const seed = saved?.seed ?? Math.floor(Math.random() * 2147483647);
 const overworld = new World(seed, saved?.mods, 'overworld');
 const nether = new World((seed ^ 0x2545f491) >>> 0, saved?.netherMods, 'nether');
-let world = saved?.dim === 'nether' ? nether : overworld;
+const end = new World((seed ^ 0x6f4a7c15) >>> 0, saved?.endMods, 'end');
+end.setupEnd();
+// Fortschritt im End: Drache besiegt? Welche Kristalle sind zerstört?
+const endState = { dragonKilled: !!saved?.endState?.dragonKilled, crystals: saved?.endState?.crystals || [] };
+let world = saved?.dim === 'nether' ? nether : saved?.dim === 'end' ? end : overworld;
 
 let saveTimer = null;
 function saveGame() {
@@ -1578,6 +1783,8 @@ function saveGame() {
       seed,
       mods: overworld.serializeMods(),
       netherMods: nether.serializeMods(),
+      endMods: end.serializeMods(),
+      endState,
       dim: world.dim,
       player: { x: player.pos[0], y: player.pos[1], z: player.pos[2], yaw: player.yaw, pitch: player.pitch, flying: player.flying },
       time: dayTime,
@@ -1598,10 +1805,8 @@ function scheduleSave() {
 //  Chunk-Verwaltung
 // ============================================================
 function disposeChunkMeshes(c) {
-  for (const m of [c.mesh, c.waterMesh, c.glowMesh, c.portalMesh]) {
-    if (m) { scene.remove(m); m.geometry.dispose(); }
-  }
-  c.mesh = c.waterMesh = c.glowMesh = c.portalMesh = null;
+  for (const m of c.meshes) { scene.remove(m); m.geometry.dispose(); }
+  c.meshes = [];
 }
 
 function makeMesh(buf, material, cx, cz) {
@@ -1623,13 +1828,12 @@ function meshChunk(cx, cz) {
   for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) world.ensureChunk(cx + dx, cz + dz);
   const c = world.getChunk(cx, cz);
   disposeChunkMeshes(c);
-  const { solid, water, glow, portal } = buildChunkGeometry(world, cx, cz);
-  c.mesh = makeMesh(solid, solidMat, cx, cz);
-  c.waterMesh = makeMesh(water, waterMat, cx, cz);
-  c.glowMesh = makeMesh(glow, glowMat, cx, cz);
-  c.portalMesh = makeMesh(portal, portalMat, cx, cz);
-  if (c.portalMesh) c.portalMesh.renderOrder = 2;
-  if (c.waterMesh) c.waterMesh.renderOrder = 1;
+  const g = buildChunkGeometry(world, cx, cz);
+  const waterMesh = makeMesh(g.water, waterMat, cx, cz), portalMesh = makeMesh(g.portal, portalMat, cx, cz);
+  if (waterMesh) waterMesh.renderOrder = 1;
+  if (portalMesh) portalMesh.renderOrder = 2;
+  c.meshes = [makeMesh(g.solid, solidMat, cx, cz), waterMesh, makeMesh(g.glow, glowMat, cx, cz), portalMesh,
+              makeMesh(g.endp, endPortalMat, cx, cz), makeMesh(g.fire, fireMat, cx, cz)].filter(Boolean);
   c.meshed = true;
 }
 
@@ -1814,7 +2018,11 @@ function updatePlayer(dt) {
     const ahead = [p[0] + Math.sign(wx) * 0.5, p[1], p[2] + Math.sign(wz) * 0.5];
     if (SOLID[world.getBlock(Math.floor(ahead[0]), Math.floor(p[1]), Math.floor(ahead[2]))]) v[1] = Math.max(v[1], 5);
   }
-  if (p[1] < -20) { p[1] = HEIGHT; v[1] = 0; }
+  if (p[1] < -20) {
+    // im End fällt man ins Nichts
+    if (world.dim === 'end') { player.hurtCd = 0; player.absorb = 0; damagePlayer(1000, 0, 0, 0); }
+    else { p[1] = HEIGHT; v[1] = 0; }
+  }
   updateHazards(dt, below);
 
   camera.position.set(p[0], p[1] + EYE, p[2]);
@@ -1841,7 +2049,7 @@ function raycast(origin, dir, maxDist) {
   let nx = 0, ny = 0, nz = 0, t = 0;
   while (t <= maxDist) {
     const id = world.getBlock(x, y, z);
-    if (id !== B.AIR && !FLUID[id] && !isPortal(id)) return { x, y, z, nx, ny, nz, id, t };
+    if (id !== B.AIR && !FLUID[id] && !isPortal(id) && id !== B.END_PORTAL) return { x, y, z, nx, ny, nz, id, t };
     if (tmx < tmy && tmx < tmz) { x += sx; t = tmx; tmx += tdx; nx = -sx; ny = 0; nz = 0; }
     else if (tmy < tmz) { y += sy; t = tmy; tmy += tdy; nx = 0; ny = -sy; nz = 0; }
     else { z += sz; t = tmz; tmz += tdz; nx = 0; ny = 0; nz = -sz; }
@@ -2049,6 +2257,49 @@ MOB_TYPES.ghast = {
     }
   },
 };
+MOB_TYPES.enderman = {
+  name: 'Enderman', drops: [[I.ENDER_PEARL, 0, 1]], hp: 40, speed: 3, hw: 0.3, h: 2.9, neutral: true, melee: 7, teleports: true,
+  build(m, r) {
+    const skin = skinTex('enderman', [22, 22, 26], 0.25);
+    const face = skinTex('enderman-face', [22, 22, 26], 0.25, ctx => { px(ctx, '#e079fa', 0, 4, 3, 1); px(ctx, '#cc00fa', 1, 4); px(ctx, '#e079fa', 5, 4, 3, 1); px(ctx, '#cc00fa', 6, 4); });
+    for (const x of [-2, 2]) m.legs.push(addPart(m, r, [2, 30, 2], [x, 30, 0], [0, -15, 0], skin));
+    addPart(m, r, [8, 12, 4], [0, 36, 0], [0, 0, 0], skin);
+    for (const x of [-5, 5]) m.armsDown.push(addPart(m, r, [2, 30, 2], [x, 41, 0], [0, -15, 0], skin));
+    addPart(m, r, [8, 8, 8], [0, 42, 0], [0, 4, 0], withFront(skin, face));
+  },
+};
+MOB_TYPES.dragon = {
+  name: 'Enderdrache', hp: 200, hw: 3.5, h: 4, boss: true, fireImmune: true,
+  build(m, r) {
+    m.root.scale.setScalar(0.8);
+    m.tail = [];
+    const skin = skinTex('dragon', [26, 24, 30], 0.35, (ctx, rnd) => { for (let i = 0; i < 6; i++) px(ctx, '#3a3046', rnd() * 8 | 0, rnd() * 8 | 0); });
+    const face = skinTex('dragon-face', [26, 24, 30], 0.35, ctx => { px(ctx, '#d040ff', 0, 2, 3, 1); px(ctx, '#f0a0ff', 1, 2); px(ctx, '#d040ff', 5, 2, 3, 1); px(ctx, '#f0a0ff', 6, 2); px(ctx, '#0a0a0a', 2, 6, 1, 1); px(ctx, '#0a0a0a', 5, 6, 1, 1); });
+    const wing = skinTex('dragon-wing', [44, 40, 50], 0.2, (ctx) => { for (let i = 0; i < 8; i += 2) px(ctx, '#1a181e', i, 0, 1, 8); });
+    const spine = skinTex('dragon-spine', [70, 66, 74], 0.2);
+    addPart(m, r, [48, 32, 96], [0, 48, 0], [0, 0, 0], skin);
+    for (let i = -2; i <= 2; i++) addPart(m, r, [4, 8, 8], [0, 66, i * 18], [0, 0, 0], spine);
+    // Hals und Kopf (nach vorne, +z)
+    let parent = r, z = 48;
+    for (let i = 0; i < 3; i++) { parent = addPart(m, parent, [16, 16, 24], [0, i === 0 ? 56 : 0, i === 0 ? 48 : 24], [0, 0, 12], skin); }
+    const head = addPart(m, parent, [32, 24, 40], [0, 0, 24], [0, 0, 20], withFront(skin, face));
+    addPart(m, head, [28, 8, 32], [0, -14, 6], [0, 0, 16], skin);   // Unterkiefer
+    for (const x of [-10, 10]) addPart(m, head, [4, 10, 6], [x, 14, 6], [0, 0, 0], spine);   // Hörner
+    // Flügel
+    for (const side of [-1, 1]) {
+      const w = addPart(m, r, [112, 6, 8], [side * 24, 62, 20], [side * 56, 0, 0], skin);
+      addPart(m, w, [112, 2, 72], [0, -2, 0], [side * 56, 0, -36], wing);
+      m.wings.push(w);
+    }
+    // Schwanz
+    parent = r;
+    for (let i = 0; i < 8; i++) {
+      parent = addPart(m, parent, [14 - i, 14 - i, 20], [0, i === 0 ? 52 : 0, i === 0 ? -48 : -20], [0, 0, -10], skin);
+      m.tail.push(parent);
+    }
+    for (const [x, zz] of [[-18, 30], [18, 30], [-18, -30], [18, -30]]) m.legs.push(addPart(m, r, [12, 28, 12], [x, 36, zz], [0, -12, 0], skin));
+  },
+};
 const ANIMALS = ['pig', 'cow', 'sheep', 'chicken'];
 const MAX_ANIMALS = 10, MAX_HOSTILE = 8;
 
@@ -2090,7 +2341,7 @@ class Mob {
     this.onGround = false;
     this.inWater = false;
     this.mats = []; this.matCache = new Map();
-    this.legs = []; this.arms = []; this.wings = [];
+    this.legs = []; this.arms = []; this.wings = []; this.armsDown = [];
     this.root = new THREE.Group();
     this.body = new THREE.Group();
     this.root.add(this.body);
@@ -2112,7 +2363,7 @@ class Mob {
     this.hp -= amount;
     this.hurtTimer = 0.35;
     const dx = this.pos[0] - fromX, dz = this.pos[2] - fromZ, l = Math.hypot(dx, dz) || 1;
-    if (knock) {
+    if (knock && !this.def.boss) {
       this.vel[0] = dx / l * knock; this.vel[2] = dz / l * knock; this.vel[1] = 5.5;
       this.onGround = false;
     }
@@ -2121,7 +2372,25 @@ class Mob {
       if (byPlayer && !peaceful) for (const m of mobs) if (m.type === this.type && Math.hypot(m.pos[0] - this.pos[0], m.pos[2] - this.pos[2]) < 16) m.angry = 30;
     } else if (!this.def.hostile) { this.panic = 5; this.moveDir = [dx / l, dz / l]; }
     if (this.hp <= 0) this.deadTime = 0;
+    else if (this.def.teleports) this.teleportRandom();
     return true;
+  }
+
+  // Enderman: an eine zufällige freie Stelle in der Nähe teleportieren
+  teleportRandom() {
+    const p = this.pos;
+    for (let k = 0; k < 16; k++) {
+      const x = Math.floor(p[0] + (Math.random() - 0.5) * 32), z = Math.floor(p[2] + (Math.random() - 0.5) * 32);
+      if (!world.getChunk(x >> 4, z >> 4)?.meshed) continue;
+      for (let y = Math.floor(p[1]) + 8; y > Math.floor(p[1]) - 8; y--) {
+        const below = world.getBlock(x, y - 1, z);
+        if (SOLID[below] && world.getBlock(x, y, z) === B.AIR && world.getBlock(x, y + 1, z) === B.AIR && world.getBlock(x, y + 2, z) === B.AIR) {
+          this.pos = [x + 0.5, y, z + 0.5];
+          this.vel = [0, 0, 0];
+          return;
+        }
+      }
+    }
   }
 
   // Beute fallen lassen: [Item, min, max, Chance]
@@ -2179,6 +2448,65 @@ class Mob {
     this.setTint(1, this.hurtTimer > 0 ? 0.45 : 1, this.hurtTimer > 0 ? 0.45 : 1);
   }
 
+  // Enderdrache: kreist um die Insel, stürzt sich auf den Spieler oder landet auf dem Brunnen
+  updateDragon(dt) {
+    const p = this.pos, v = this.vel, st = this.ai || (this.ai = { mode: 'circle', t: 0, angle: Math.atan2(p[2], p[0]), heal: 0 });
+    st.t += dt;
+    const fy = world.fountainY;
+    let target, speed = 15;
+    const pd = Math.hypot(player.pos[0] - p[0], player.pos[1] + 1 - (p[1] + 2), player.pos[2] - p[2]);
+    if (st.mode === 'circle') {
+      st.angle += dt * 0.3;
+      target = [Math.cos(st.angle) * 45, fy + 24 + Math.sin(st.t * 0.6) * 4, Math.sin(st.angle) * 45];
+      if (st.t > 14) { st.mode = Math.random() < 0.55 && !player.dead && !peaceful ? 'charge' : 'perch'; st.t = 0; }
+    } else if (st.mode === 'charge') {
+      target = [player.pos[0], player.pos[1] - 1, player.pos[2]];
+      speed = 21;
+      if (pd < 4.5) { damagePlayer(10, p[0], p[2], 14); st.mode = 'circle'; st.t = 0; }
+      if (st.t > 9 || player.dead) { st.mode = 'circle'; st.t = 0; }
+    } else {
+      target = [0.5, fy + 5.5, 0.5];
+      speed = 11;
+      if (st.t > 22) { st.mode = 'circle'; st.t = 0; }
+    }
+    const tx = target[0] - p[0], ty = target[1] - p[1], tz = target[2] - p[2], tl = Math.hypot(tx, ty, tz) || 1;
+    const sp = st.mode === 'perch' ? Math.min(speed, tl * 1.5) : speed;
+    const k = Math.min(1, dt * 1.3);
+    v[0] += (tx / tl * sp - v[0]) * k; v[1] += (ty / tl * sp - v[1]) * k; v[2] += (tz / tl * sp - v[2]) * k;
+    for (let a = 0; a < 3; a++) p[a] += v[a] * dt;
+    const hs = Math.hypot(v[0], v[2]);
+    if (hs > 0.5) {
+      let diff = Math.atan2(v[0], v[2]) - this.yaw;
+      diff = Math.atan2(Math.sin(diff), Math.cos(diff));
+      this.yaw += diff * Math.min(1, dt * 3);
+    }
+    this.body.rotation.x = -Math.atan2(v[1], Math.max(1, hs)) * 0.6;
+    const t = performance.now() / 1000;
+    const flap = st.mode === 'perch' && tl < 2 ? Math.sin(t * 2) * 0.15 : Math.sin(t * 4) * 0.7;
+    this.wings.forEach((w, i) => { w.rotation.z = flap * (i ? -1 : 1); });
+    this.tail.forEach((seg, i) => { seg.rotation.y = Math.sin(t * 2 - i * 0.6) * 0.15; });
+    // Kristalle heilen den Drachen
+    const c = nearestCrystal(p, 48);
+    if (c) {
+      st.heal += dt;
+      if (st.heal > 0.5) { st.heal = 0; this.hp = Math.min(this.def.hp, this.hp + 1); }
+      setBeam(c.pos, [p[0], p[1] + 2.5, p[2]]);
+    } else setBeam(null);
+    this.root.position.set(p[0], p[1], p[2]);
+    this.root.rotation.y = this.yaw;
+    this.setTint(1, this.hurtTimer > 0 ? 0.45 : 1, this.hurtTimer > 0 ? 0.45 : 1);
+  }
+  updateDragonDeath(dt) {
+    this.deadTime += dt;
+    setBeam(null);
+    this.pos[1] += dt * 2;
+    this.root.position.set(this.pos[0], this.pos[1], this.pos[2]);
+    this.root.rotation.y += dt * 1.5;
+    const g = Math.sin(this.deadTime * 20) > 0 ? 3 : 1;
+    this.setTint(g, g * 0.7, g);
+    if (this.deadTime > 4) { this.remove(); onDragonDefeated(); }
+  }
+
   remove() {
     if (this.removed) return;
     this.removed = true;
@@ -2194,6 +2522,7 @@ class Mob {
     const d = this.def, p = this.pos, v = this.vel;
     this.root.position.set(p[0], p[1], p[2]);
 
+    if (this.deadTime >= 0 && d.boss) { this.updateDragonDeath(dt); return; }
     if (this.deadTime >= 0) {
       this.deadTime += dt;
       this.body.rotation.z = Math.min(1, this.deadTime * 4) * Math.PI / 2;
@@ -2203,7 +2532,7 @@ class Mob {
     }
     // Chunk entladen -> verschwinden
     const chunk = world.getChunk(Math.floor(p[0]) >> 4, Math.floor(p[2]) >> 4);
-    if (!chunk || !chunk.meshed || p[1] < -10) { this.remove(); return; }
+    if (!d.boss && (!chunk || !chunk.meshed || p[1] < -10)) { this.remove(); return; }
 
     this.hurtTimer = Math.max(0, this.hurtTimer - dt);
     this.attackCd = Math.max(0, this.attackCd - dt);
@@ -2211,6 +2540,9 @@ class Mob {
     const fluid = world.getBlock(Math.floor(p[0]), Math.floor(p[1] + 0.3), Math.floor(p[2]));
     this.inWater = FLUID[fluid] === 1;
     if (fluid === B.LAVA && !d.fireImmune) { this.burnTimer = 1.2; this.hurt(4, p[0], p[2], 0); }
+    if (fluid === B.FIRE && !d.fireImmune) { this.burnTimer = 1.2; this.hurt(1, p[0], p[2], 0); }
+    if (d.teleports && fluid === B.WATER) this.hurt(1, p[0], p[2], 0);   // Endermen mögen kein Wasser
+    if (d.boss) { this.updateDragon(dt); return; }
     if (d.flying) { this.updateFlying(dt); return; }
 
     // ---- KI ----
@@ -2218,6 +2550,11 @@ class Mob {
     const hd = Math.hypot(dx, dz) || 1, dist = Math.hypot(hd, dy);
     let speed = 0;
     this.angry = Math.max(0, this.angry - dt);
+    // Endermen werden wütend, wenn man ihnen in die Augen schaut
+    if (d.teleports && this.angry <= 0 && !peaceful && !player.dead && dist < 32) {
+      const hx = p[0] - camera.position.x, hy = p[1] + 2.6 - camera.position.y, hz = p[2] - camera.position.z, hl = Math.hypot(hx, hy, hz);
+      if ((hx * rayDir.x + hy * rayDir.y + hz * rayDir.z) / hl > 0.985) this.angry = 30;
+    }
     const chasing = (d.hostile || (d.neutral && this.angry > 0)) && !player.dead && dist < 32;
     if (chasing) {
       this.moveDir = [dx / hd, dz / hd];
@@ -2319,6 +2656,7 @@ class Mob {
       leg.rotation.x = swing * sign;
     });
     this.arms.forEach((arm, i) => { arm.rotation.x = -Math.PI / 2 + Math.sin(this.walkPhase * 0.5 + i) * 0.08; });
+    this.armsDown.forEach((arm, i) => { arm.rotation.x = swing * (i ? 1 : -1) * 0.6; });
     const flap = this.onGround ? 0 : Math.sin(performance.now() * 0.03) * 0.7 + 0.7;
     this.wings.forEach((w, i) => { w.rotation.z = flap * (i === 0 ? -1 : 1); });
     this.root.position.set(p[0], p[1], p[2]);
@@ -2353,7 +2691,9 @@ function trySpawn(hostile) {
     if (!s || (hostile ? !SOLID[s.id] || s.id === B.LEAVES : s.id !== B.GRASS)) continue;
     if (world.getBlock(x, s.y + 2, z) !== B.AIR) continue;
     if (hostile) {
-      mobs.push(new Mob(Math.random() < 0.6 ? 'zombie' : 'creeper', x + 0.5, s.y + 1, z + 0.5));
+      const roll = Math.random();
+      const type = roll < 0.5 ? 'zombie' : roll < 0.85 ? 'creeper' : world.getBlock(x, s.y + 3, z) === B.AIR ? 'enderman' : 'zombie';
+      mobs.push(new Mob(type, x + 0.5, s.y + 1, z + 0.5));
     } else {
       // Tiere kommen in kleinen Herden
       const type = ANIMALS[Math.floor(Math.random() * ANIMALS.length)];
@@ -2403,11 +2743,26 @@ function trySpawnNether(ghast) {
   }
 }
 
+// End: Endermen auf der Insel
+function trySpawnEnd() {
+  for (let attempt = 0; attempt < 6; attempt++) {
+    const a = Math.random() * Math.PI * 2, r = 16 + Math.random() * 28;
+    const x = Math.floor(player.pos[0] + Math.cos(a) * r), z = Math.floor(player.pos[2] + Math.sin(a) * r);
+    if (!world.getChunk(x >> 4, z >> 4)?.meshed) continue;
+    const s = surfaceAt(x, z);
+    if (!s || s.id !== B.END_STONE) continue;
+    mobs.push(new Mob('enderman', x + 0.5, s.y + 1, z + 0.5));
+    return;
+  }
+}
+
 function updateMobs(dt) {
   spawnTimer -= dt;
   if (spawnTimer <= 0) {
     spawnTimer = 0.5;
-    if (world.dim === 'nether') {
+    if (world.dim === 'end') {
+      if (mobs.filter(m => m.type === 'enderman').length < 8) trySpawnEnd();
+    } else if (world.dim === 'nether') {
       let piglins = 0, ghasts = 0;
       for (const m of mobs) m.type === 'ghast' ? ghasts++ : piglins++;
       if (piglins < 8) trySpawnNether(false);
@@ -2423,7 +2778,7 @@ function updateMobs(dt) {
     if (m.removed) continue;
     // zu weit weg -> verschwinden; Creeper verschwinden tagsüber langsam
     const dist = Math.hypot(m.pos[0] - player.pos[0], m.pos[2] - player.pos[2]);
-    if (dist > 80 || (m.type === 'creeper' && daylight > 0.8 && dist > 20 && Math.random() < dt * 0.05)) { m.remove(); continue; }
+    if (!m.def.boss && (dist > 80 || (m.type === 'creeper' && daylight > 0.8 && dist > 20 && Math.random() < dt * 0.05))) { m.remove(); continue; }
     m.update(dt);
   }
   for (let i = mobs.length - 1; i >= 0; i--) if (mobs[i].removed) mobs.splice(i, 1);
@@ -2505,7 +2860,16 @@ function updateFireballs(dt) {
     }
     f.mesh.position.set(f.pos[0], f.pos[1], f.pos[2]);
     f.mesh.rotation.x += dt * 5; f.mesh.rotation.y += dt * 7;
-    if (hit) { removeFireball(f); explode(f.pos[0], f.pos[1], f.pos[2], 1); }
+    if (hit) {
+      removeFireball(f);
+      explode(f.pos[0], f.pos[1], f.pos[2], 1);
+      for (let k = 0; k < 4; k++) {
+        const x = Math.floor(f.pos[0]) + Math.floor(Math.random() * 3) - 1, z = Math.floor(f.pos[2]) + Math.floor(Math.random() * 3) - 1;
+        for (let y = Math.floor(f.pos[1]) + 1; y > Math.floor(f.pos[1]) - 3; y--) {
+          if (world.getBlock(x, y, z) === B.AIR && SOLID[world.getBlock(x, y - 1, z)]) { placeFire(x, y, z); break; }
+        }
+      }
+    }
   }
 }
 
@@ -2664,6 +3028,243 @@ function updateTNT(dt) {
 }
 
 // ============================================================
+//  Feuer
+// ============================================================
+// Jedes Feuer brennt eine Weile, frisst brennbare Nachbarblöcke und springt über. Auf Netherrack brennt es ewig.
+const fires = new Map();   // "x,y,z" -> { x, y, z, age, life }
+let fireTimer = 0;
+const fireDirty = new Set();
+function markDirty(x, z) {
+  const cx = x >> 4, cz = z >> 4, lx = x & 15, lz = z & 15;
+  for (const dx of [0, lx === 0 ? -1 : lx === 15 ? 1 : 0]) for (const dz of [0, lz === 0 ? -1 : lz === 15 ? 1 : 0]) fireDirty.add((cx + dx) + ',' + (cz + dz));
+}
+function placeFire(x, y, z) {
+  if (world.getBlock(x, y, z) !== B.AIR && !FLAMMABLE[world.getBlock(x, y, z)]) return false;
+  world.setBlock(x, y, z, B.FIRE);
+  fires.set(x + ',' + y + ',' + z, { x, y, z, age: 0, life: 3 + Math.random() * 5 });
+  markDirty(x, z);
+  return true;
+}
+function removeFire(f) {
+  fires.delete(f.x + ',' + f.y + ',' + f.z);
+  if (world.getBlock(f.x, f.y, f.z) === B.FIRE) { world.setBlock(f.x, f.y, f.z, B.AIR); markDirty(f.x, f.z); }
+}
+function updateFire(dt) {
+  // beim Laden gespeichertes Feuer wieder anfachen
+  while (world.loadedFires.length) {
+    const [x, y, z] = world.loadedFires.pop();
+    if (world.getBlock(x, y, z) === B.FIRE) fires.set(x + ',' + y + ',' + z, { x, y, z, age: 0, life: 3 + Math.random() * 5 });
+  }
+  fireTimer += dt;
+  if (fireTimer < 0.4) return;
+  const step = fireTimer;
+  fireTimer = 0;
+  for (const f of [...fires.values()]) {
+    if (world.getBlock(f.x, f.y, f.z) !== B.FIRE) { fires.delete(f.x + ',' + f.y + ',' + f.z); continue; }
+    const below = world.getBlock(f.x, f.y - 1, f.z);
+    const eternal = below === B.NETHERRACK || below === B.MAGMA;
+    f.age += step;
+    let fuel = false, water = false;
+    for (const [dx, dy, dz] of SIX) {
+      const nx = f.x + dx, ny = f.y + dy, nz = f.z + dz, id = world.getBlock(nx, ny, nz);
+      if (id === B.WATER) water = true;
+      if (!FLAMMABLE[id]) continue;
+      fuel = true;
+      if (fires.size < 400 && Math.random() < 0.3 * step) {
+        if (id === B.TNT) { world.setBlock(nx, ny, nz, B.AIR); markDirty(nx, nz); primeTNT(nx, ny, nz, 3); }
+        else placeFire(nx, ny, nz);   // Block verbrennt
+      }
+    }
+    // auf Luftfelder neben Brennbarem überspringen
+    if (fuel && fires.size < 400 && Math.random() < 0.25 * step) {
+      const [dx, dy, dz] = SIX[Math.floor(Math.random() * 6)];
+      const nx = f.x + dx, ny = f.y + dy, nz = f.z + dz;
+      if (world.getBlock(nx, ny, nz) === B.AIR && SIX.some(([ax, ay, az]) => FLAMMABLE[world.getBlock(nx + ax, ny + ay, nz + az)])) placeFire(nx, ny, nz);
+    }
+    const supported = SOLID[below] || fuel;
+    if (water || !supported || (!eternal && f.age > f.life * (fuel ? 2 : 1))) removeFire(f);
+  }
+  for (const key of fireDirty) {
+    const [cx, cz] = key.split(',').map(Number);
+    if (world.getChunk(cx, cz)?.meshed) meshChunk(cx, cz);
+  }
+  fireDirty.clear();
+}
+
+// ============================================================
+//  Enderperlen & das End
+// ============================================================
+const pearls = [];
+const pearlGeo = new THREE.BoxGeometry(0.25, 0.25, 0.25);
+const pearlMat = new THREE.MeshBasicMaterial({ color: 0x1a6b5e });
+function throwPearl() {
+  const mesh = new THREE.Mesh(pearlGeo, pearlMat);
+  const o = camera.position;
+  mesh.position.copy(o);
+  scene.add(mesh);
+  pearls.push({ pos: [o.x, o.y, o.z], vel: [rayDir.x * 20, rayDir.y * 20, rayDir.z * 20], mesh, age: 0 });
+  consumeHeld();
+}
+function updatePearls(dt) {
+  for (let i = pearls.length - 1; i >= 0; i--) {
+    const pl = pearls[i];
+    pl.age += dt;
+    pl.vel[1] -= 14 * dt;
+    let landed = false;
+    for (let s = 0; s < 4 && !landed; s++) {
+      const prev = [...pl.pos];
+      for (let a = 0; a < 3; a++) pl.pos[a] += pl.vel[a] * dt / 4;
+      if (SOLID[world.getBlock(Math.floor(pl.pos[0]), Math.floor(pl.pos[1]), Math.floor(pl.pos[2]))]) {
+        // Spieler an die Aufschlagstelle teleportieren
+        landed = true;
+        player.pos = [prev[0], Math.max(prev[1] - 0.9, Math.floor(prev[1])), prev[2]];
+        let tries = 0;
+        while (collides(player.pos) && tries++ < 4) player.pos[1] += 1;
+        player.vel = [0, 0, 0];
+        player.fallPeak = player.pos[1];
+        player.hurtCd = 0;
+        damagePlayer(5, 0, 0, 0);
+      }
+    }
+    pl.mesh.position.set(pl.pos[0], pl.pos[1], pl.pos[2]);
+    if (landed || pl.age > 10) { scene.remove(pl.mesh); pearls.splice(i, 1); }
+  }
+}
+
+// Endkristalle auf den Obsidian-Säulen heilen den Drachen
+const crystals = [];
+const crystalOuterGeo = new THREE.BoxGeometry(1.2, 1.2, 1.2);
+const crystalInnerGeo = new THREE.BoxGeometry(0.6, 0.6, 0.6);
+const crystalOuterMat = new THREE.MeshBasicMaterial({ color: 0xff8cff, transparent: true, opacity: 0.45, depthWrite: false });
+const crystalInnerMat = new THREE.MeshBasicMaterial({ color: 0xc040ff });
+const beam = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color: 0xff77ff }));
+beam.visible = false;
+beam.frustumCulled = false;
+scene.add(beam);
+function setBeam(a, b) {
+  beam.visible = !!a;
+  if (!a) return;
+  const pos = beam.geometry.attributes.position;
+  pos.setXYZ(0, a[0], a[1], a[2]); pos.setXYZ(1, b[0], b[1], b[2]);
+  pos.needsUpdate = true;
+}
+function nearestCrystal(p, range) {
+  let best = null, bd = range;
+  for (const c of crystals) {
+    const d = Math.hypot(c.pos[0] - p[0], c.pos[1] - p[1], c.pos[2] - p[2]);
+    if (d < bd) { bd = d; best = c; }
+  }
+  return best;
+}
+function destroyCrystal(c) {
+  scene.remove(c.group);
+  crystals.splice(crystals.indexOf(c), 1);
+  if (!endState.crystals.includes(c.id)) endState.crystals.push(c.id);
+  explode(c.pos[0], c.pos[1], c.pos[2], 3);
+  scheduleSave();
+}
+function updateCrystals(dt) {
+  const t = performance.now() / 1000;
+  for (const c of crystals) {
+    c.group.position.set(c.pos[0], c.pos[1] + Math.sin(t * 2 + c.id) * 0.25, c.pos[2]);
+    c.group.children[0].rotation.set(t, t * 1.3, 0);
+    c.group.children[1].rotation.set(-t * 1.5, t, t * 0.5);
+  }
+}
+// Drache und Kristalle erscheinen, solange der Drache nicht besiegt ist
+function spawnEndEntities() {
+  if (world !== end) return;
+  for (const [i, pl] of end.pillars.entries()) {
+    if (endState.crystals.includes(i) || endState.dragonKilled) continue;
+    const group = new THREE.Group();
+    group.add(new THREE.Mesh(crystalOuterGeo, crystalOuterMat), new THREE.Mesh(crystalInnerGeo, crystalInnerMat));
+    scene.add(group);
+    crystals.push({ id: i, pos: [pl.x + 0.5, pl.top + 2.5, pl.z + 0.5], group });
+  }
+  if (!endState.dragonKilled && !mobs.some(m => m.def.boss)) mobs.push(new Mob('dragon', 40, end.fountainY + 25, 0.5));
+}
+function clearEndEntities() {
+  for (const c of crystals) scene.remove(c.group);
+  crystals.length = 0;
+  for (const pl of pearls) scene.remove(pl.mesh);
+  pearls.length = 0;
+  setBeam(null);
+}
+// Nach dem Sieg: Ausgangsportal im Brunnen und das Drachenei obendrauf
+function onDragonDefeated() {
+  endState.dragonKilled = true;
+  for (const c of [...crystals]) { scene.remove(c.group); crystals.splice(crystals.indexOf(c), 1); }
+  const fy = end.fountainY;
+  for (let z = -2; z <= 2; z++) for (let x = -2; x <= 2; x++) {
+    if (Math.hypot(x, z) <= 2.5 && (x || z)) world.setBlock(x, fy + 1, z, B.END_PORTAL);
+  }
+  world.setBlock(0, fy + 5, 0, B.DRAGON_EGG);
+  for (const [cx, cz] of [[0, 0], [-1, 0], [0, -1], [-1, -1]]) if (world.getChunk(cx, cz)?.meshed) meshChunk(cx, cz);
+  showName('🐉 Der Enderdrache ist besiegt! Spring ins Portal in der Mitte.');
+  scheduleSave();
+}
+function updateBossBar() {
+  const dragon = mobs.find(m => m.def.boss && !m.removed);
+  bossEl.style.display = dragon ? 'block' : 'none';
+  if (dragon) bossEl.querySelector('.boss-fill').style.width = Math.max(0, dragon.hp / dragon.def.hp * 100) + '%';
+}
+
+// Enderauge in Rahmen setzen; 12 Augen im Ring (5×5 ohne Ecken) öffnen das Portal
+function insertEye(x, y, z) {
+  world.setBlock(x, y, z, B.END_FRAME_EYE);
+  consumeHeld();
+  remeshAround(x, z);
+  showName(activateEndPortal(x, y, z) ? 'Das Endportal öffnet sich!' : 'Enderauge eingesetzt');
+  scheduleSave();
+}
+function activateEndPortal(x, y, z) {
+  for (let cx = x - 2; cx <= x + 2; cx++) for (let cz = z - 2; cz <= z + 2; cz++) {
+    const ring = [];
+    for (let k = -1; k <= 1; k++) ring.push([cx + k, cz - 2], [cx + k, cz + 2], [cx - 2, cz + k], [cx + 2, cz + k]);
+    if (!ring.every(([rx, rz]) => world.getBlock(rx, y, rz) === B.END_FRAME_EYE)) continue;
+    let free = true;
+    for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) { const id = world.getBlock(cx + dx, y, cz + dz); if (id !== B.AIR && id !== B.END_PORTAL) free = false; }
+    if (!free) continue;
+    const cells = [];
+    for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) { world.setBlock(cx + dx, y, cz + dz, B.END_PORTAL); cells.push([cx + dx, y, cz + dz]); }
+    remeshCells(cells);
+    return true;
+  }
+  return false;
+}
+function inEndPortal() {
+  const p = player.pos;
+  for (const y of [Math.floor(p[1]), Math.floor(p[1] + 0.5)])
+    for (let z = Math.floor(p[2] - HALF_W); z <= Math.floor(p[2] + HALF_W); z++)
+      for (let x = Math.floor(p[0] - HALF_W); x <= Math.floor(p[0] + HALF_W); x++)
+        if (world.getBlock(x, y, z) === B.END_PORTAL) return true;
+  return false;
+}
+function travelEnd() {
+  const toEnd = world.dim !== 'end';
+  if (toEnd) {
+    switchWorld(end);
+    // schwebende Obsidian-Plattform wie im echten Minecraft
+    for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) world.ensureChunk(6 + dx, dz);
+    for (let z = -2; z <= 2; z++) for (let x = 98; x <= 102; x++) {
+      world.setBlock(x, 48, z, B.OBSIDIAN);
+      for (let y = 49; y <= 51; y++) world.setBlock(x, y, z, B.AIR);
+    }
+    player.pos = [100.5, 49, 0.5];
+  } else {
+    switchWorld(overworld);
+    player.pos = findSpawn();
+  }
+  player.vel = [0, 0, 0];
+  player.fallPeak = player.pos[1];
+  player.portalCooldown = true;
+  preloadAround();
+  spawnEndEntities();
+  showName(toEnd ? 'Willkommen im End! Besiege den Enderdrachen.' : 'Zurück in der Oberwelt');
+  saveGame();
+}
+
+// ============================================================
 //  Lebenspunkte
 // ============================================================
 const MAX_HP = 20;
@@ -2744,6 +3345,9 @@ function setOnFire(sec) { if (!player.effects.fire_resistance) player.fire = Mat
 function updateHazards(dt, below) {
   const fireRes = !!player.effects.fire_resistance;
   if (player.inLava && !fireRes && !player.flying) { damagePlayer(4, 0, 0, 0); player.fire = 8; }
+  const p = player.pos;
+  const inFire = world.getBlock(Math.floor(p[0]), Math.floor(p[1] + 0.1), Math.floor(p[2])) === B.FIRE || world.getBlock(Math.floor(p[0]), Math.floor(p[1] + 1), Math.floor(p[2])) === B.FIRE;
+  if (inFire && !fireRes) { damagePlayer(1, 0, 0, 0); player.fire = Math.max(player.fire, 8); }
   if ((player.inWater && !player.inLava) || fireRes) player.fire = 0;
   if (player.fire > 0) {
     player.fire -= dt;
@@ -2796,6 +3400,7 @@ function respawn() {
 const SIX = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0], [0, 0, 1], [0, 0, -1]];
 const PORTAL_TIME = 2.5;   // so lange muss man im Portal stehen
 const NETHER_FOG = new THREE.Color(0x3a0d0a);
+const END_SKY = new THREE.Color(0x0b0612);
 const LAVA_FOG = new THREE.Color(0xc8400a);
 
 function applyDimensionLook() {
@@ -2813,6 +3418,8 @@ function switchWorld(target) {
   for (const t of tnts) { scene.remove(t.mesh); t.mat.dispose(); }
   tnts.length = 0;
   for (const f of [...fireballs]) removeFireball(f);
+  fires.clear();
+  clearEndEntities();
   world = target;
   applyDimensionLook();
 }
@@ -2878,8 +3485,10 @@ function inPortal() {
   return false;
 }
 function checkPortal(dt) {
-  if (!inPortal()) { player.portalTimer = 0; player.portalCooldown = false; }
+  const endP = inEndPortal(), netherP = !endP && inPortal();
+  if (!endP && !netherP) { player.portalTimer = 0; player.portalCooldown = false; }
   else if (!player.portalCooldown) {
+    if (endP) { travelEnd(); return; }
     player.portalTimer += dt;
     if (player.portalTimer >= PORTAL_TIME) travel();
   }
@@ -2956,7 +3565,9 @@ function useFlintAndSteel() {
   }
   const x = target.x + target.nx, y = target.y + target.ny, z = target.z + target.nz;
   if (world.getBlock(x, y, z) !== B.AIR) return;
-  showName(lightPortal(x, y, z) ? 'Das Portal leuchtet auf!' : 'Zünde das Innere eines Obsidian-Rahmens an');
+  if (lightPortal(x, y, z)) { showName('Das Portal leuchtet auf!'); return; }
+  // sonst einfach Feuer machen
+  if (SOLID[world.getBlock(x, y - 1, z)] || FLAMMABLE[target.id]) placeFire(x, y, z);
 }
 
 // ============================================================
@@ -3008,6 +3619,10 @@ function primaryAction() {
     const t = rayBox(o, dir, f.pos.map(c => c - 0.7), f.pos.map(c => c + 0.7));
     if (t !== null && t < REACH) { f.vel = dir.map(c => c * 16); f.owner = 'player'; f.age = 0; return; }
   }
+  for (const c of crystals) {
+    const t = rayBox(o, dir, c.pos.map(v => v - 0.8), c.pos.map(v => v + 0.8));
+    if (t !== null && t < (target ? target.t : REACH) + 0.5) { destroyCrystal(c); return; }
+  }
   if (targetMob) {
     if (attackCd > 0) return;
     attackCd = 0.35;
@@ -3038,11 +3653,11 @@ function breakBlock() {
 
 // Was ein abgebauter Block fallen lässt (Standard: sich selbst)
 const BLOCK_DROPS = {
-  [B.GRASS]: B.DIRT, [B.SNOW]: B.DIRT, [B.STONE]: B.COBBLE, [B.FURNACE_LIT]: B.FURNACE,
+  [B.GRASS]: B.DIRT, [B.SNOW]: B.DIRT, [B.STONE]: B.COBBLE, [B.FURNACE_LIT]: B.FURNACE, [B.END_FRAME_EYE]: B.END_FRAME,
   [B.COAL_ORE]: I.COAL, [B.DIAMOND_ORE]: I.DIAMOND, [B.EMERALD_ORE]: I.EMERALD, [B.NETHER_QUARTZ_ORE]: I.QUARTZ,
   [B.REDSTONE_ORE]: [I.REDSTONE, 4], [B.LAPIS_ORE]: [I.LAPIS, 5], [B.NETHER_GOLD_ORE]: [I.GOLD_NUGGET, 3],
 };
-const NO_DROP = new Set([B.WATER, B.LAVA, B.BEDROCK, B.GLASS, B.ICE, B.LEAVES, B.BIRCH_LEAVES, B.SPRUCE_LEAVES, B.PORTAL_X, B.PORTAL_Z, B.TNT]);
+const NO_DROP = new Set([B.FIRE, B.END_PORTAL, B.WATER, B.LAVA, B.BEDROCK, B.GLASS, B.ICE, B.LEAVES, B.BIRCH_LEAVES, B.SPRUCE_LEAVES, B.PORTAL_X, B.PORTAL_Z, B.TNT]);
 function blockDrop(id) {
   if (NO_DROP.has(id)) return null;
   if (id === B.GRAVEL && Math.random() < 0.1) return [I.FLINT, 1];
@@ -3073,6 +3688,8 @@ const RECIPES = [
   { shape: ['##', '##'], key: { '#': [B.SAND] }, out: [B.SANDSTONE, 1] },
   { shape: ['##', '##'], key: { '#': [I.QUARTZ] }, out: [B.QUARTZ, 1] },
   { shapeless: [[B.PUMPKIN], [B.GLOWSTONE]], out: [B.JACK_O_LANTERN, 1] },
+  { shapeless: [[I.ENDER_PEARL], [B.GLOWSTONE]], out: [I.EYE_OF_ENDER, 1] },
+  { shape: ['##', '##'], key: { '#': [B.END_STONE] }, out: [B.END_STONE_BRICKS, 4] },
   ...[[I.GOLD_INGOT, B.GOLD_BLOCK], [I.IRON_INGOT, B.IRON_BLOCK], [I.DIAMOND, B.DIAMOND_BLOCK], [I.EMERALD, B.EMERALD_BLOCK],
       [I.REDSTONE, B.REDSTONE_BLOCK], [I.LAPIS, B.LAPIS_BLOCK], [I.GOLD_NUGGET, I.GOLD_INGOT]].flatMap(([small, big]) => [
     { shape: ['###', '###', '###'], key: { '#': [small] }, out: [big, 1] },
@@ -3223,6 +3840,12 @@ function startSecondary() {
   if (target?.id === B.FURNACE || target?.id === B.FURNACE_LIT) { openInventory('furnace', furnaceAt(target.x, target.y, target.z)); return; }
   const held = heldItem();
   if (held && held.id === I.FLINT_AND_STEEL) { useFlintAndSteel(); return; }
+  if (held && held.id === I.EYE_OF_ENDER) {
+    if (target?.id === B.END_FRAME) insertEye(target.x, target.y, target.z);
+    else showName('Setze das Enderauge in einen Endportalrahmen');
+    return;
+  }
+  if (held && held.id === I.ENDER_PEARL) { throwPearl(); return; }
   if (held && ITEMS[held.id]?.food) {
     if (canEat(held.id)) eating = { id: held.id, t: 0 };
     else showName('Du hast schon volle Lebenspunkte');
@@ -3285,6 +3908,7 @@ const nameEl = document.getElementById('blockname');
 const debugEl = document.getElementById('debug');
 const overlay = document.getElementById('overlay');
 const underwaterEl = document.getElementById('underwater');
+const bossEl = document.getElementById('bossbar');
 const fireEl = document.getElementById('fire');
 const portalEl = document.getElementById('portalfx');
 const flyHint = document.getElementById('flyhint');
@@ -3845,9 +4469,13 @@ function updateSky(dt) {
   dayTime = (dayTime + dt / DAY_LENGTH) % 1;
   const angle = dayTime * Math.PI * 2;
   const sunH = Math.sin(angle);
-  const inNether = world.dim === 'nether';
+  const inNether = world.dim === 'nether', inEnd = world.dim === 'end';
   let brightness;
-  if (inNether) {
+  if (inEnd) {
+    daylight = 0;
+    brightness = 0.75;
+    skyColor.copy(END_SKY);
+  } else if (inNether) {
     // im Nether gibt es keinen Tag und keine Nacht
     daylight = 0;
     brightness = 0.8;
@@ -3871,7 +4499,7 @@ function updateSky(dt) {
     scene.background = scene.fog.color;
   } else {
     scene.fog.color.copy(skyColor);
-    scene.fog.near = fogFar * (inNether ? 0.15 : 0.55); scene.fog.far = fogFar * (inNether ? 0.8 : 0.95);
+    scene.fog.near = fogFar * (inNether ? 0.15 : inEnd ? 0.45 : 0.55); scene.fog.far = fogFar * (inNether ? 0.8 : inEnd ? 1.05 : 0.95);
     scene.background = skyColor;
   }
   underwaterEl.style.display = FLUID[camBlock] ? 'block' : 'none';
@@ -3882,7 +4510,11 @@ function updateSky(dt) {
   solidMat.color.setScalar(lin);
   waterMat.color.setScalar(lin);
   cloudMat.color.setScalar(Math.max(0.15, brightness));
-  if (inNether) return;
+  stars.position.copy(camera.position);
+  stars.material.opacity = inEnd ? 1 : inNether ? 0 : Math.max(0, Math.min(1, (0.6 - daylight) * 2));
+  stars.visible = stars.material.opacity > 0.01;
+  endPortalTex.offset.set((performance.now() / 1000) * 0.02, (performance.now() / 1000) * 0.013);
+  if (world.dim !== 'overworld') return;
 
   sunDir.set(Math.cos(angle), sunH, 0.25).normalize();
   sun.position.copy(camera.position).addScaledVector(sunDir, 400);
@@ -3925,8 +4557,9 @@ function preloadAround() {
   while (collides(player.pos) && player.pos[1] < HEIGHT) player.pos[1] += 1;
 }
 preloadAround();
+spawnEndEntities();
 // Zugriff für Tests/Entwicklung: index.html?debug
-if (new URLSearchParams(location.search).has('debug')) window.blockwelt = { mobs, Mob, player, get world() { return world; }, overworld, nether, travel, fireballs, shootFireball, damagePlayer, inventory, addItem, drops, Drop, I, B, ITEMS, openInventory, closeInventory, primeTNT, meshChunk, BLOCK_ORDER, furnaces, RECIPES, craftGrid, matchRecipe, get target() { return target; } };
+if (new URLSearchParams(location.search).has('debug')) window.blockwelt = { mobs, Mob, player, get world() { return world; }, overworld, nether, end, endState, travelEnd, placeFire, fires, crystals, pearls, travel, fireballs, shootFireball, damagePlayer, inventory, addItem, drops, Drop, I, B, ITEMS, openInventory, closeInventory, primeTNT, meshChunk, BLOCK_ORDER, furnaces, RECIPES, craftGrid, matchRecipe, get target() { return target; } };
 player.fallPeak = player.pos[1];
 renderHealth();
 camera.position.set(player.pos[0], player.pos[1] + EYE, player.pos[2]);
@@ -3947,13 +4580,17 @@ renderer.setAnimationLoop(() => {
     updateDrops(dt);
     updateTNT(dt);
     updateFireballs(dt);
+    updateFire(dt);
+    updatePearls(dt);
     updatePlayerEffects(dt);
     updateEating(dt);
   } else camera.rotation.set(player.pitch, player.yaw, 0);
   updateFx(dt);
+  updateCrystals(dt);
+  updateBossBar();
   if (!player.dead && (isActive() || invOpen)) updateFurnaces(dt);
   portalAnim += dt;
-  if (portalAnim > 0.08) { portalAnim = 0; drawPortal(performance.now() / 1000); }
+  if (portalAnim > 0.08) { portalAnim = 0; drawPortal(performance.now() / 1000); drawFire(performance.now() / 1000); }
   attackCd = Math.max(0, attackCd - dt);
   updateTarget();
 
@@ -3975,7 +4612,7 @@ renderer.setAnimationLoop(() => {
       `XYZ: ${p[0].toFixed(2)} / ${p[1].toFixed(2)} / ${p[2].toFixed(2)}\n` +
       `Chunk: ${Math.floor(p[0] / CHUNK)}, ${Math.floor(p[2] / CHUNK)}  geladen: ${world.chunks.size}\n` +
       `Uhrzeit: ${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}\n` +
-      `Seed: ${seed}  Dimension: ${world.dim === 'nether' ? 'Nether' : 'Oberwelt'}\n` +
+      `Seed: ${seed}  Dimension: ${{ nether: 'Nether', end: 'End', overworld: 'Oberwelt' }[world.dim]}\n` +
       `Mobs: ${mobs.length}  Leben: ${player.hp}/${MAX_HP}\n` +
       (targetMob ? `Ziel: ${targetMob.def.name} (${targetMob.hp} HP)` :
        target ? `Ziel: ${BLOCKS[target.id].name} (${target.x}, ${target.y}, ${target.z})` : '');
