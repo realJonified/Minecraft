@@ -61,11 +61,17 @@
   #furnace-ui[style*="flex"] ~ #recipes-label, #furnace-ui[style*="flex"] ~ #recipes { display: none; }
   #craft-ui[style*="flex"] ~ #furnace-hint { display: none; }
   .inv-hint { margin-top: 8px; font-size: 12px; color: #555; max-width: calc(var(--slot) * 9 + 16px); }
-  #blockname { position: fixed; bottom: 112px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 18px; text-shadow: 2px 2px 0 #000; transition: opacity .4s; pointer-events: none; }
+  #blockname { position: fixed; bottom: 128px; left: 50%; transform: translateX(-50%); color: #fff; font-size: 18px; text-shadow: 2px 2px 0 #000; transition: opacity .4s; pointer-events: none; }
 
   #debug { position: fixed; top: 8px; left: 8px; color: #fff; font: 13px/1.4 monospace; text-shadow: 1px 1px 0 #000; white-space: pre; pointer-events: none; display: none; }
   #flyhint { position: fixed; top: 8px; right: 12px; color: #fff; font-size: 14px; text-shadow: 1px 1px 0 #000; display: none; }
-  #health { position: fixed; bottom: 84px; left: 50%; transform: translateX(-50%); display: flex; flex-wrap: wrap; width: 198px; gap: 2px; pointer-events: none; }
+  #health { position: fixed; bottom: 84px; left: calc(50% - 272px); display: flex; flex-wrap: wrap; width: 198px; gap: 2px; pointer-events: none; }
+  #food, #air { position: fixed; bottom: 84px; left: calc(50% + 74px); display: flex; flex-direction: row-reverse; width: 198px; gap: 2px; pointer-events: none; }
+  #air { bottom: 104px; }
+  #health img, #food img, #air img { width: 18px; height: 16px; image-rendering: pixelated; }
+  body:not(.survival) #health, body:not(.survival) #food, body:not(.survival) #air { display: none; }
+  body.survival #t-fly, body.survival #inv-trash, body.survival .trash-hint { display: none; }
+  #newworld-choice button { width: calc(50% - 6px); display: inline-block; margin: 0 2px 8px; }
   #health img { width: 18px; height: 16px; image-rendering: pixelated; }
   #hurt { position: fixed; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, rgba(200,0,0,0) 35%, rgba(200,0,0,.6)); }
   #death { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(110,0,0,.55); }
@@ -100,7 +106,10 @@
   body.touch .slot .num { display: none; }
   body.touch #effects { top: calc(max(10px, env(safe-area-inset-top)) + 64px); right: 10px; }
   body.touch #blockname { top: calc(max(8px, env(safe-area-inset-top)) + min(46px, calc((100vw - 150px) / 9)) + 44px); bottom: auto; }
-  body.touch #health { top: calc(max(8px, env(safe-area-inset-top)) + min(46px, calc((100vw - 150px) / 9)) + 18px); bottom: auto; }
+  body.touch #health, body.touch #food { top: calc(max(8px, env(safe-area-inset-top)) + min(46px, calc((100vw - 150px) / 9)) + 18px); bottom: auto; left: calc(50% - 168px); width: 160px; }
+  body.touch #food { left: calc(50% + 8px); }
+  body.touch #air { top: calc(max(8px, env(safe-area-inset-top)) + min(46px, calc((100vw - 150px) / 9)) + 38px); bottom: auto; left: calc(50% + 8px); width: 160px; }
+  body.touch #health img, body.touch #food img, body.touch #air img { width: 14px; height: 12px; }
   body.touch #flyhint { display: none !important; }
   #joy { position: absolute; left: max(24px, env(safe-area-inset-left)); bottom: max(24px, env(safe-area-inset-bottom)); width: 140px; height: 140px; border-radius: 50%; background: rgba(255,255,255,.12); border: 2px solid rgba(255,255,255,.35); pointer-events: auto; touch-action: none; }
   #knob { position: absolute; left: 50%; top: 50%; width: 60px; height: 60px; margin: -30px 0 0 -30px; border-radius: 50%; background: rgba(255,255,255,.5); pointer-events: none; }
@@ -127,6 +136,8 @@
 <div id="crosshair"></div>
 <div id="blockname"></div>
 <div id="health"></div>
+<div id="food"></div>
+<div id="air"></div>
 <div id="effects"></div>
 <div id="eatbar"><div></div></div>
 <div id="hurt"></div>
@@ -139,15 +150,19 @@
     <p class="sub">Baue, grabe und erkunde eine unendliche Welt</p>
     <button id="play">Spielen</button>
     <button id="peaceful">Monster: An</button>
+    <button id="mode">Spielmodus: 🗡️ Überleben</button>
     <button id="newworld">Neue Welt erstellen</button>
+    <div id="newworld-choice" style="display:none">
+      <button data-mode="survival">🗡️ Überleben</button><button data-mode="creative">🧱 Kreativ</button>
+    </div>
     <div class="controls">
       <b>W A S D</b><span>Laufen</span>
       <b>Maus</b><span>Umsehen</span>
       <b>Leertaste</b><span>Springen / Schwimmen / Hochfliegen</span>
       <b>Shift</b><span>Sprinten / Runterfliegen</span>
-      <b>Linksklick</b><span>Block abbauen / Mob schlagen</span>
+      <b>Linksklick</b><span>Block abbauen (im Überleben gedrückt halten) / Mob schlagen</span>
       <b>Rechtsklick</b><span>Block setzen / Essen (gedrückt halten)</span>
-      <b>E</b><span>Auswahl &amp; Inventar</span>
+      <b>E</b><span>Inventar (Kreativ: Auswahl, Überleben: 2×2-Crafting)</span>
       <b>Rechtsklick</b><span>auf Werkbank / Ofen: öffnen</span>
       <b>Mittelklick</b><span>Block auswählen</span>
       <b>1–9 / Mausrad</b><span>Block wechseln</span>
@@ -210,7 +225,7 @@
     <div class="inv-label">Inventar</div>
     <div id="inv-main" class="inv-grid"></div>
     <div id="inv-hotbar" class="inv-grid"></div>
-    <div class="inv-hint">Antippen/Klicken nimmt einen Gegenstand auf, nochmal auf einen Platz tippen legt ihn ab. 🗑 löscht, was du gerade hältst.</div>
+    <div class="inv-hint">Antippen/Klicken nimmt einen Gegenstand auf, nochmal auf einen Platz tippen legt ihn ab. Rechtsklick legt ein einzelnes Stück ab.<span class="trash-hint"> 🗑 löscht, was du gerade hältst.</span></div>
   </div>
   <div id="cursor"></div>
 </div>
@@ -422,6 +437,15 @@ item(132, 'GOLDEN_SWORD', 'Goldschwert', { damage: 5, stack: 1 });
 item(133, 'DIAMOND_SWORD', 'Diamantschwert', { damage: 8, stack: 1 });
 item(134, 'ENDER_PEARL', 'Enderperle', { stack: 16 });
 item(135, 'EYE_OF_ENDER', 'Enderauge');
+// Werkzeuge: tier = Abbaustufe (1 Holz/Gold, 2 Stein, 3 Eisen, 4 Diamant), speed = Abbau-Tempo
+const TOOL_MATS = [['WOODEN', 'Holz', 1, 2], ['STONE', 'Stein', 2, 4], ['IRON', 'Eisen', 3, 6], ['GOLDEN', 'Gold', 1, 12], ['DIAMOND', 'Diamant', 4, 8]];
+const TOOL_KINDS = [['PICKAXE', 'spitzhacke', 'pickaxe'], ['AXE', 'axt', 'axe'], ['SHOVEL', 'schaufel', 'shovel']];
+TOOL_MATS.forEach(([mat, name, tier, speed], mi) => TOOL_KINDS.forEach(([kind, suffix, type], ki) =>
+  item(136 + mi * 3 + ki, mat + '_' + kind, name + suffix, { tool: { type, tier, speed }, stack: 1 })));
+// Sättigung beim Essen (Hungerpunkte stehen in heal)
+const SATURATION = { APPLE: 2.4, GOLDEN_APPLE: 9.6, ENCHANTED_GOLDEN_APPLE: 9.6, PORKCHOP: 1.8, COOKED_PORKCHOP: 12.8, BEEF: 1.8, STEAK: 12.8,
+  MUTTON: 1.2, COOKED_MUTTON: 9.6, CHICKEN: 1.2, COOKED_CHICKEN: 7.2, ROTTEN_FLESH: 0.8 };
+for (const [key, sat] of Object.entries(SATURATION)) ITEMS[I[key]].sat = sat;
 for (const it of Object.values(ITEMS)) it.food = it.heal !== undefined;
 const ITEM_ORDER = Object.keys(ITEMS).map(Number);
 
@@ -950,6 +974,15 @@ const ITEM_ART = {
   lump: [
     '................', '................', '................', '.....oooo.......', '...oohhccoo.....', '..ohhccccccoo...', '..ohccccccccco..', '.occccdcccccco..',
     '.occcccccccdco..', '.occdcccccccco..', '..occcccccdco...', '...ooccccccoo...', '.....oooooo.....', '................', '................', '................'],
+  pickaxe: [
+    '................', '....oooooooo....', '...ohhhhhhhho...', '..ohddooooddho..', '..oho..oso..oho.', '..oo..oso....oo.', '.....oso........', '....oso.........',
+    '...oso..........', '..oso...........', '.oso............', '.oo.............', '................', '................', '................', '................'],
+  axe: [
+    '................', '........ooo.....', '.......ohhho....', '......ohhhddo...', '......ohhdddo...', '.....osohddo....', '....oso.ooo.....', '...oso..........',
+    '..oso...........', '.oso............', '.oo.............', '................', '................', '................', '................', '................'],
+  shovel: [
+    '................', '...........ooo..', '..........ohhho.', '.........ohhddo.', '.........ohddo..', '........osooo...', '.......oso......', '......oso.......',
+    '.....oso........', '....oso.........', '...oso..........', '..oso...........', '.oo.............', '................', '................', '................'],
   tear: [
     '................', '................', '.......o........', '......owo.......', '......owo.......', '.....owwco......', '.....owwco......', '....owwwcco.....',
     '....owwwcco.....', '....owwccco.....', '.....occco......', '......ooo.......', '................', '................', '................', '................'],
@@ -992,6 +1025,10 @@ const ITEM_LOOK = {
   IRON_SWORD: ['sword', { o: '#2a2a2a', b: '#ffffff', d: '#c0c0c0', h: '#5a4020', s: '#6b4a26' }],
   GOLDEN_SWORD: ['sword', { o: '#2a2a2a', b: '#fff27a', d: '#e8b520', h: '#5a4020', s: '#6b4a26' }],
   DIAMOND_SWORD: ['sword', { o: '#2a2a2a', b: '#8cf8f0', d: '#2bc7ac', h: '#5a4020', s: '#6b4a26' }],
+  ...Object.fromEntries(TOOL_MATS.flatMap(([mat], mi) => {
+    const [h, d] = [['#b08a52', '#6b5230'], ['#a0a0a0', '#6a6a6a'], ['#ffffff', '#c0c0c0'], ['#fff27a', '#e8b520'], ['#8cf8f0', '#2bc7ac']][mi];
+    return TOOL_KINDS.map(([kind, , type]) => [mat + '_' + kind, [type, { o: '#2a2a2a', h, d, s: '#6b4a26' }]]);
+  })),
   ENDER_PEARL: ['orb', { o: '#0a2a26', c: '#1a6b5e', h: '#6fe0c8' }],
   EYE_OF_ENDER: ['orb', { o: '#0a2a1a', c: '#3aa86a', h: '#b8f8d0', p: '#0a1a10' }],
 };
@@ -1768,6 +1805,9 @@ function loadSave() {
 }
 const saved = loadSave();
 const seed = saved?.seed ?? Math.floor(Math.random() * 2147483647);
+// Spielmodus: 'survival' (Überleben) oder 'creative' (Kreativ). Alte Spielstände ohne Modus waren kreativ.
+let gameMode = saved?.mode ?? (saved?.mods ? 'creative' : 'survival');
+const isSurvival = () => gameMode === 'survival';
 const overworld = new World(seed, saved?.mods, 'overworld');
 const nether = new World((seed ^ 0x2545f491) >>> 0, saved?.netherMods, 'nether');
 const end = new World((seed ^ 0x6f4a7c15) >>> 0, saved?.endMods, 'end');
@@ -1788,6 +1828,9 @@ function saveGame() {
       dim: world.dim,
       player: { x: player.pos[0], y: player.pos[1], z: player.pos[2], yaw: player.yaw, pitch: player.pitch, flying: player.flying },
       time: dayTime,
+      mode: gameMode,
+      food: player.food,
+      saturation: player.saturation,
       hp: player.hp,
       peaceful,
       slot: selectedSlot,
@@ -1909,7 +1952,14 @@ const player = {
   magmaTick: 0,
   portalTimer: 0,
   portalCooldown: false,
+  food: 20,        // Hunger (20 = satt)
+  saturation: 5,
+  exhaustion: 0,
+  hungerTick: 0,
+  air: 15,         // Luft unter Wasser in Sekunden
+  drownTick: 0,
 };
+const MAX_AIR = 15;
 
 function findSpawn() {
   for (let i = 0; i < 400; i++) {
@@ -1943,7 +1993,7 @@ function updatePlayer(dt) {
   if (!world.getChunk(Math.floor(p[0]) >> 4, Math.floor(p[2]) >> 4)?.meshed) return;
   player.hurtCd = Math.max(0, player.hurtCd - dt);
   player.regenTimer += dt;
-  if (player.hp < MAX_HP && player.regenTimer > 4) { player.hp++; player.regenTimer -= 1.5; renderHealth(); }
+  if (!isSurvival() && player.hp < MAX_HP && player.regenTimer > 4) { player.hp++; player.regenTimer -= 1.5; renderHealth(); }
   const feet = world.getBlock(Math.floor(p[0]), Math.floor(p[1] + 0.4), Math.floor(p[2]));
   player.inWater = FLUID[feet] === 1;
   player.inLava = feet === B.LAVA || world.getBlock(Math.floor(p[0]), Math.floor(p[1] + 1.2), Math.floor(p[2])) === B.LAVA;
@@ -1963,7 +2013,7 @@ function updatePlayer(dt) {
   const wx = fx * cos + fz * sin;
   const wz = -fx * sin + fz * cos;
 
-  const sprinting = !player.flying && ((keys.ShiftLeft && keys.KeyW) || (joy.y < -0.75 && Math.hypot(joy.x, joy.y) > 0.95));
+  const sprinting = !player.flying && (!isSurvival() || player.food > 6) && ((keys.ShiftLeft && keys.KeyW) || (joy.y < -0.75 && Math.hypot(joy.x, joy.y) > 0.95));
   let speed = player.flying ? FLY : sprinting ? SPRINT : WALK;
   if (player.inWater && !player.flying) speed *= player.inLava ? 0.35 : 0.55;
   if (below === B.SOUL_SAND && player.onGround && !player.flying) speed *= 0.45;
@@ -1987,7 +2037,7 @@ function updatePlayer(dt) {
     v[1] = Math.max(v[1], -3.5);
     vyMove = v[1];
   } else {
-    if (jump && player.onGround) v[1] = JUMP;
+    if (jump && player.onGround) { v[1] = JUMP; if (isSurvival()) player.exhaustion += 0.2; }
     const vy0 = v[1];
     v[1] = Math.max(v[1] - GRAVITY * dt, -55);
     vyMove = (vy0 + v[1]) / 2;
@@ -2024,6 +2074,7 @@ function updatePlayer(dt) {
     else { p[1] = HEIGHT; v[1] = 0; }
   }
   updateHazards(dt, below);
+  updateHunger(dt, sprinting && Math.hypot(v[0], v[2]) > WALK);
 
   camera.position.set(p[0], p[1] + EYE, p[2]);
   camera.rotation.set(player.pitch, player.yaw, 0);
@@ -2959,7 +3010,10 @@ class Drop {
   update(dt) {
     const p = this.pos, v = this.vel;
     this.age += dt;
-    if (this.age > 300 || !world.getChunk(Math.floor(p[0]) >> 4, Math.floor(p[2]) >> 4)?.meshed) { this.remove(); return; }
+    if (this.age > 300) { this.remove(); return; }
+    // weit weg: liegen lassen, bis der Spieler zurückkommt
+    this.mesh.visible = !!world.getChunk(Math.floor(p[0]) >> 4, Math.floor(p[2]) >> 4)?.meshed;
+    if (!this.mesh.visible) return;
     if (world.getBlock(Math.floor(p[0]), Math.floor(p[1] + 0.1), Math.floor(p[2])) === B.LAVA) { this.remove(); return; }   // verbrennt
     const dx = player.pos[0] - p[0], dy = player.pos[1] + 0.8 - p[1], dz = player.pos[2] - p[2];
     const dist = Math.hypot(dx, dy, dz);
@@ -3270,6 +3324,7 @@ function travelEnd() {
 const MAX_HP = 20;
 function damagePlayer(amount, fromX, fromZ, knock = 6) {
   if (player.dead || amount <= 0 || player.hurtCd > 0) return;
+  if (!isSurvival() && amount < 1000) return;   // im Kreativmodus unverwundbar (außer im Nichts)
   // Resistenz verringert Schaden, goldene Herzen fangen ihn zuerst ab
   const res = player.effects.resistance;
   if (res) amount *= Math.max(0, 1 - 0.2 * res.level);
@@ -3343,7 +3398,7 @@ function renderEffects() {
 // Lava, Feuer und Magmablöcke; Feuerresistenz schützt vor allem davon
 function setOnFire(sec) { if (!player.effects.fire_resistance) player.fire = Math.max(player.fire, sec); }
 function updateHazards(dt, below) {
-  const fireRes = !!player.effects.fire_resistance;
+  const fireRes = !!player.effects.fire_resistance || !isSurvival();
   if (player.inLava && !fireRes && !player.flying) { damagePlayer(4, 0, 0, 0); player.fire = 8; }
   const p = player.pos;
   const inFire = world.getBlock(Math.floor(p[0]), Math.floor(p[1] + 0.1), Math.floor(p[2])) === B.FIRE || world.getBlock(Math.floor(p[0]), Math.floor(p[1] + 1), Math.floor(p[2])) === B.FIRE;
@@ -3362,6 +3417,33 @@ function updateHazards(dt, below) {
   checkPortal(dt);
 }
 
+// Hunger: sinkt mit der Zeit, beim Sprinten und Springen. Volle Leiste heilt, leere Leiste schadet.
+function updateHunger(dt, sprinting) {
+  if (!isSurvival()) return;
+  player.exhaustion += dt * 0.06 + (sprinting ? dt * 0.3 : 0);
+  while (player.exhaustion >= 4) {
+    player.exhaustion -= 4;
+    if (player.saturation > 0) player.saturation = Math.max(0, player.saturation - 1);
+    else { player.food = Math.max(0, player.food - 1); renderFood(); }
+  }
+  player.hungerTick += dt;
+  if (player.hungerTick >= 4) {
+    player.hungerTick = 0;
+    if (player.food >= 18 && player.hp < MAX_HP) { player.hp = Math.min(MAX_HP, player.hp + 1); player.exhaustion += 3; renderHealth(); }
+    else if (player.food <= 0 && player.hp > 1) { player.hurtCd = 0; damagePlayer(1, 0, 0, 0); }
+  }
+  // Ertrinken
+  const p = player.pos;
+  if (world.getBlock(Math.floor(p[0]), Math.floor(p[1] + EYE), Math.floor(p[2])) === B.WATER) {
+    player.air = Math.max(0, player.air - dt);
+    if (player.air <= 0) {
+      player.drownTick += dt;
+      if (player.drownTick >= 1) { player.drownTick = 0; player.hurtCd = 0; damagePlayer(2, 0, 0, 0); }
+    }
+  } else player.air = Math.min(MAX_AIR, player.air + dt * 5);
+  renderAir();
+}
+
 function die() {
   player.dead = true;
   player.fire = 0;
@@ -3372,6 +3454,15 @@ function die() {
   player.absorb = 0;
   renderEffects();
   if (invOpen) closeInventory();
+  // im Überlebensmodus fällt das ganze Inventar auf den Boden
+  if (isSurvival()) {
+    for (let i = 0; i < INV_SIZE; i++) {
+      const st = inventory[i];
+      if (st && st.n !== Infinity) drops.push(new Drop(st.id, st.n, player.pos[0], player.pos[1] + 1, player.pos[2]));
+      inventory[i] = null;
+    }
+    renderHotbar();
+  }
   resetInput();
   if (locked) document.exitPointerLock();
   if (touchPlaying) { touchPlaying = false; document.body.classList.remove('playing'); }
@@ -3382,6 +3473,8 @@ function die() {
 function respawn() {
   player.dead = false;
   player.hp = MAX_HP;
+  player.food = 20; player.saturation = 5; player.air = MAX_AIR;
+  renderFood();
   player.vel = [0, 0, 0];
   if (world !== overworld) switchWorld(overworld);
   player.pos = findSpawn();
@@ -3579,7 +3672,7 @@ const inventory = new Array(INV_SIZE).fill(null);
 if (Array.isArray(saved?.inventory)) {
   saved.inventory.forEach((s, i) => { if (s && i < INV_SIZE && itemExists(s[0])) inventory[i] = { id: s[0], n: s[1] < 0 ? Infinity : s[1] }; });
 } else {
-  (Array.isArray(saved?.hotbar) ? saved.hotbar : HOTBAR_DEFAULT).slice(0, 9).forEach((id, i) => { if (itemExists(id)) inventory[i] = { id, n: Infinity }; });
+  if (gameMode === 'creative') (Array.isArray(saved?.hotbar) ? saved.hotbar : HOTBAR_DEFAULT).slice(0, 9).forEach((id, i) => { if (itemExists(id)) inventory[i] = { id, n: Infinity }; });
 }
 let selectedSlot = Math.min(8, Math.max(0, saved?.slot ?? 0));
 const heldItem = () => inventory[selectedSlot];
@@ -3627,9 +3720,10 @@ function primaryAction() {
     if (attackCd > 0) return;
     attackCd = 0.35;
     targetMob.hurt(ITEMS[heldItem()?.id]?.damage ?? 4, player.pos[0], player.pos[2], 7, true);
+    if (isSurvival()) player.exhaustion += 0.1;
     return;
   }
-  breakBlock();
+  if (!isSurvival()) breakBlock();   // im Überlebensmodus übernimmt updateMining das Abbauen
 }
 
 function breakBlock() {
@@ -3642,13 +3736,58 @@ function breakBlock() {
   }
   world.setBlock(x, y, z, fill);
   remeshAround(x, z);
-  if (id === B.TNT) primeTNT(x, y, z, 3);
+  const survival = isSurvival();
+  if (id === B.TNT && !survival) primeTNT(x, y, z, 3);
   else if (id === B.OBSIDIAN) for (const [dx, dy, dz] of SIX) breakPortalAt(x + dx, y + dy, z + dz);
-  else if (id === B.LEAVES && Math.random() < 0.08) drops.push(new Drop(I.APPLE, 1, x + 0.5, y + 0.3, z + 0.5));
+  else if (id === B.LEAVES && survival && Math.random() < 0.08) drops.push(new Drop(I.APPLE, 1, x + 0.5, y + 0.3, z + 0.5));
   if (id === B.FURNACE || id === B.FURNACE_LIT) removeFurnace(x, y, z);
   const drop = blockDrop(id);
-  if (drop) drops.push(new Drop(drop[0], drop[1], x + 0.5, y + 0.3, z + 0.5));
+  if (drop && survival && canHarvest(id, heldItem()?.id)) drops.push(new Drop(drop[0], drop[1], x + 0.5, y + 0.3, z + 0.5));
+  if (survival) player.exhaustion += 0.005;
   scheduleSave();
+}
+
+// ---------- Abbauen im Überlebensmodus ----------
+// Härte wie in Minecraft: Abbauzeit = Härte × 1,5 s (× 5 ohne passendes Werkzeug), geteilt durch das Werkzeug-Tempo
+const HARDNESS = {
+  [B.GRASS]: 0.6, [B.DIRT]: 0.5, [B.SNOW]: 0.6, [B.SAND]: 0.5, [B.GRAVEL]: 0.6, [B.CLAY]: 0.6, [B.SOUL_SAND]: 0.5,
+  [B.STONE]: 1.5, [B.COBBLE]: 2, [B.MOSSY_COBBLE]: 2, [B.STONE_BRICKS]: 1.5, [B.GRANITE]: 1.5, [B.DIORITE]: 1.5, [B.ANDESITE]: 1.5,
+  [B.SANDSTONE]: 0.8, [B.BRICK]: 2, [B.NETHERRACK]: 0.4, [B.NETHER_BRICKS]: 2, [B.MAGMA]: 0.5, [B.END_STONE]: 3, [B.END_STONE_BRICKS]: 3, [B.PURPUR]: 1.5,
+  [B.OBSIDIAN]: 50, [B.LOG]: 2, [B.BIRCH_LOG]: 2, [B.SPRUCE_LOG]: 2, [B.PLANKS]: 2, [B.BIRCH_PLANKS]: 2, [B.SPRUCE_PLANKS]: 2,
+  [B.LEAVES]: 0.2, [B.BIRCH_LEAVES]: 0.2, [B.SPRUCE_LEAVES]: 0.2, [B.GLASS]: 0.3, [B.ICE]: 0.5, [B.GLOWSTONE]: 0.3,
+  [B.BOOKSHELF]: 1.5, [B.CRAFTING]: 2.5, [B.FURNACE]: 3.5, [B.FURNACE_LIT]: 3.5, [B.TNT]: 0, [B.FIRE]: 0,
+  [B.PUMPKIN]: 1, [B.JACK_O_LANTERN]: 1, [B.MELON]: 1, [B.HAY]: 0.5, [B.CACTUS]: 0.4, [B.QUARTZ]: 0.8, [B.DRAGON_EGG]: 3,
+  [B.BEDROCK]: Infinity, [B.END_FRAME]: Infinity, [B.END_FRAME_EYE]: Infinity,
+};
+for (const id of [B.COAL_ORE, B.IRON_ORE, B.GOLD_ORE, B.DIAMOND_ORE, B.REDSTONE_ORE, B.EMERALD_ORE, B.LAPIS_ORE, B.NETHER_QUARTZ_ORE, B.NETHER_GOLD_ORE]) HARDNESS[id] = 3;
+for (const id of [B.GOLD_BLOCK, B.IRON_BLOCK, B.DIAMOND_BLOCK, B.EMERALD_BLOCK, B.REDSTONE_BLOCK, B.LAPIS_BLOCK]) HARDNESS[id] = 5;
+WOOL_COLORS.forEach((_, i) => { HARDNESS[54 + i] = 0.8; });
+const TOOL_FOR = {};
+for (const id of [B.STONE, B.COBBLE, B.MOSSY_COBBLE, B.STONE_BRICKS, B.GRANITE, B.DIORITE, B.ANDESITE, B.SANDSTONE, B.BRICK, B.NETHERRACK, B.NETHER_BRICKS,
+                  B.MAGMA, B.END_STONE, B.END_STONE_BRICKS, B.PURPUR, B.OBSIDIAN, B.FURNACE, B.FURNACE_LIT, B.QUARTZ, B.ICE, B.GLOWSTONE,
+                  B.COAL_ORE, B.IRON_ORE, B.GOLD_ORE, B.DIAMOND_ORE, B.REDSTONE_ORE, B.EMERALD_ORE, B.LAPIS_ORE, B.NETHER_QUARTZ_ORE, B.NETHER_GOLD_ORE,
+                  B.GOLD_BLOCK, B.IRON_BLOCK, B.DIAMOND_BLOCK, B.EMERALD_BLOCK, B.REDSTONE_BLOCK, B.LAPIS_BLOCK]) TOOL_FOR[id] = 'pickaxe';
+for (const id of [B.LOG, B.BIRCH_LOG, B.SPRUCE_LOG, B.PLANKS, B.BIRCH_PLANKS, B.SPRUCE_PLANKS, B.CRAFTING, B.BOOKSHELF, B.PUMPKIN, B.JACK_O_LANTERN, B.MELON]) TOOL_FOR[id] = 'axe';
+for (const id of [B.GRASS, B.DIRT, B.SNOW, B.SAND, B.GRAVEL, B.CLAY, B.SOUL_SAND]) TOOL_FOR[id] = 'shovel';
+// Mindest-Spitzhacke, damit etwas fällt (1 = Holz, 2 = Stein, 3 = Eisen, 4 = Diamant)
+const NEED_TIER = {
+  [B.IRON_ORE]: 2, [B.LAPIS_ORE]: 2, [B.IRON_BLOCK]: 2, [B.LAPIS_BLOCK]: 2,
+  [B.GOLD_ORE]: 3, [B.DIAMOND_ORE]: 3, [B.EMERALD_ORE]: 3, [B.REDSTONE_ORE]: 3, [B.GOLD_BLOCK]: 3, [B.DIAMOND_BLOCK]: 3, [B.EMERALD_BLOCK]: 3, [B.REDSTONE_BLOCK]: 3,
+  [B.OBSIDIAN]: 4,
+};
+function canHarvest(blockId, heldId) {
+  const need = NEED_TIER[blockId] ?? (TOOL_FOR[blockId] === 'pickaxe' && blockId !== B.ICE && blockId !== B.GLOWSTONE ? 1 : 0);
+  if (!need) return true;
+  const tool = ITEMS[heldId]?.tool;
+  return tool?.type === 'pickaxe' && tool.tier >= need;
+}
+function breakTime(blockId, heldId) {
+  const h = HARDNESS[blockId] ?? 1;
+  if (h === Infinity) return Infinity;
+  if (h === 0) return 0.05;
+  const tool = ITEMS[heldId]?.tool;
+  const speed = tool && tool.type === TOOL_FOR[blockId] ? tool.speed : 1;
+  return h * (canHarvest(blockId, heldId) ? 1.5 : 5) / speed;
 }
 
 // Was ein abgebauter Block fallen lässt (Standard: sich selbst)
@@ -3657,7 +3796,7 @@ const BLOCK_DROPS = {
   [B.COAL_ORE]: I.COAL, [B.DIAMOND_ORE]: I.DIAMOND, [B.EMERALD_ORE]: I.EMERALD, [B.NETHER_QUARTZ_ORE]: I.QUARTZ,
   [B.REDSTONE_ORE]: [I.REDSTONE, 4], [B.LAPIS_ORE]: [I.LAPIS, 5], [B.NETHER_GOLD_ORE]: [I.GOLD_NUGGET, 3],
 };
-const NO_DROP = new Set([B.FIRE, B.END_PORTAL, B.WATER, B.LAVA, B.BEDROCK, B.GLASS, B.ICE, B.LEAVES, B.BIRCH_LEAVES, B.SPRUCE_LEAVES, B.PORTAL_X, B.PORTAL_Z, B.TNT]);
+const NO_DROP = new Set([B.FIRE, B.END_PORTAL, B.WATER, B.LAVA, B.BEDROCK, B.GLASS, B.ICE, B.LEAVES, B.BIRCH_LEAVES, B.SPRUCE_LEAVES, B.PORTAL_X, B.PORTAL_Z]);
 function blockDrop(id) {
   if (NO_DROP.has(id)) return null;
   if (id === B.GRAVEL && Math.random() < 0.1) return [I.FLINT, 1];
@@ -3689,6 +3828,14 @@ const RECIPES = [
   { shape: ['##', '##'], key: { '#': [I.QUARTZ] }, out: [B.QUARTZ, 1] },
   { shapeless: [[B.PUMPKIN], [B.GLOWSTONE]], out: [B.JACK_O_LANTERN, 1] },
   { shapeless: [[I.ENDER_PEARL], [B.GLOWSTONE]], out: [I.EYE_OF_ENDER, 1] },
+  ...TOOL_MATS.flatMap(([mat], mi) => {
+    const M = [ANY_PLANKS, [B.COBBLE], [I.IRON_INGOT], [I.GOLD_INGOT], [I.DIAMOND]][mi];
+    return [
+      { shape: ['MMM', ' S ', ' S '], key: { M, S: [I.STICK] }, out: [I[mat + '_PICKAXE'], 1] },
+      { shape: ['MM', 'MS', ' S'], key: { M, S: [I.STICK] }, out: [I[mat + '_AXE'], 1] },
+      { shape: ['M', 'S', 'S'], key: { M, S: [I.STICK] }, out: [I[mat + '_SHOVEL'], 1] },
+    ];
+  }),
   { shape: ['##', '##'], key: { '#': [B.END_STONE] }, out: [B.END_STONE_BRICKS, 4] },
   ...[[I.GOLD_INGOT, B.GOLD_BLOCK], [I.IRON_INGOT, B.IRON_BLOCK], [I.DIAMOND, B.DIAMOND_BLOCK], [I.EMERALD, B.EMERALD_BLOCK],
       [I.REDSTONE, B.REDSTONE_BLOCK], [I.LAPIS, B.LAPIS_BLOCK], [I.GOLD_NUGGET, I.GOLD_INGOT]].flatMap(([small, big]) => [
@@ -3727,7 +3874,7 @@ function matchRecipe(grid) {
 }
 // Zellen eines Rezepts (für das automatische Befüllen aus dem Rezeptbuch)
 function recipeCells(r) {
-  if (r.shapeless) return r.shapeless.map((opts, i) => ({ index: i, opts }));
+  if (r.shapeless) return r.shapeless.map((opts, i) => ({ index: [0, 1, 3, 4, 2, 5, 6, 7, 8][i], opts }));
   const cells = [];
   r.shape.forEach((row, rr) => [...row].forEach((ch, cc) => { if (ch !== ' ') cells.push({ index: rr * 3 + cc, opts: r.key[ch] }); }));
   return cells;
@@ -3746,6 +3893,7 @@ const SMELT = {
 // Brenndauer in Sekunden (eine Kohle reicht für 8 Gegenstände)
 const FUEL = {
   [I.COAL]: 40, [I.CHARCOAL]: 40, [I.STICK]: 2.5, [B.CRAFTING]: 7.5, [B.BOOKSHELF]: 7.5, [I.WOODEN_SWORD]: 5,
+  [I.WOODEN_PICKAXE]: 5, [I.WOODEN_AXE]: 5, [I.WOODEN_SHOVEL]: 5,
   ...Object.fromEntries([...ANY_PLANKS, ...ANY_LOG].map(id => [id, 7.5])),
 };
 const serStack = (st) => st ? [st.id, st.n === Infinity ? -1 : st.n] : null;
@@ -3827,12 +3975,54 @@ function placeBlock() {
   }
 }
 
+// ---------- Abbau-Fortschritt mit Rissen (Überlebensmodus) ----------
+const crackTex = Array.from({ length: 10 }, (_, stage) => {
+  const c = document.createElement('canvas'); c.width = c.height = 16;
+  const ctx = c.getContext('2d');
+  const rnd = mulberry32(5);
+  ctx.fillStyle = 'rgba(0,0,0,0.75)';
+  for (let k = 0; k < 6; k++) {
+    let x = 7 + Math.floor(rnd() * 3) - 1, y = 7 + Math.floor(rnd() * 3) - 1;
+    const len = (stage + 1) * 1.2;
+    for (let i = 0; i < len; i++) {
+      ctx.fillRect(x, y, 1, 1);
+      x = Math.max(0, Math.min(15, x + Math.floor(rnd() * 3) - 1 + (k % 2 ? 1 : -1) * (rnd() < 0.4 ? 1 : 0)));
+      y = Math.max(0, Math.min(15, y + Math.floor(rnd() * 3) - 1 + (k < 3 ? 1 : -1) * (rnd() < 0.4 ? 1 : 0)));
+    }
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.generateMipmaps = false;
+  return t;
+});
+const crackMesh = new THREE.Mesh(new THREE.BoxGeometry(1.006, 1.006, 1.006), new THREE.MeshBasicMaterial({ map: crackTex[0], transparent: true, depthWrite: false }));
+crackMesh.visible = false;
+scene.add(crackMesh);
+let mining = null;
+function updateMining(dt) {
+  const active = isSurvival() && mouseAction === primaryAction && target && !targetMob;
+  if (!active) { mining = null; crackMesh.visible = false; return; }
+  const key = target.x + ',' + target.y + ',' + target.z;
+  if (!mining || mining.key !== key) mining = { key, progress: 0 };
+  const time = breakTime(target.id, heldItem()?.id);
+  if (time === Infinity) { crackMesh.visible = false; return; }
+  mining.progress += dt / time;
+  if (mining.progress >= 1) {
+    breakBlock();
+    mining = null;
+    crackMesh.visible = false;
+    return;
+  }
+  crackMesh.visible = true;
+  crackMesh.position.set(target.x + 0.5, target.y + 0.5, target.z + 0.5);
+  crackMesh.material.map = crackTex[Math.min(9, Math.floor(mining.progress * 10))];
+}
+
 // ---------- Essen: Rechtsklick / 🧱 gedrückt halten ----------
 const EAT_TIME = 1.6;
 let eating = null;
 function canEat(id) {
   const it = ITEMS[id];
-  return !!it?.food && (it.always || player.hp < MAX_HP);
+  return !!it?.food && (it.always || (isSurvival() ? player.food < 20 : player.hp < MAX_HP));
 }
 function startSecondary() {
   updateTarget();
@@ -3848,7 +4038,7 @@ function startSecondary() {
   if (held && held.id === I.ENDER_PEARL) { throwPearl(); return; }
   if (held && ITEMS[held.id]?.food) {
     if (canEat(held.id)) eating = { id: held.id, t: 0 };
-    else showName('Du hast schon volle Lebenspunkte');
+    else showName(isSurvival() ? 'Du bist satt' : 'Du hast schon volle Lebenspunkte');
     return;
   }
   startHold(placeBlock);
@@ -3867,7 +4057,11 @@ function updateEating(dt) {
   eatBarEl.firstElementChild.style.width = Math.min(100, eating.t / EAT_TIME * 100) + '%';
   if (eating.t < EAT_TIME) return;
   const it = ITEMS[held.id];
-  player.hp = Math.min(MAX_HP, player.hp + it.heal);
+  if (isSurvival()) {
+    player.food = Math.min(20, player.food + it.heal);
+    player.saturation = Math.min(player.food, player.saturation + (it.sat ?? 0));
+    renderFood();
+  } else player.hp = Math.min(MAX_HP, player.hp + it.heal);
   for (const [name, level, time] of it.effects || []) addEffect(name, level, time);
   consumeHeld();
   renderHealth();
@@ -3877,7 +4071,7 @@ function updateEating(dt) {
 }
 
 function pickBlock() {
-  if (!target || target.id === B.BEDROCK) return;
+  if (!target || target.id === B.BEDROCK || isSurvival()) return;
   const i = inventory.slice(0, 9).findIndex(s => s && s.id === target.id);
   if (i >= 0) { selectSlot(i); return; }
   const old = inventory[selectedSlot];
@@ -3984,6 +4178,50 @@ const GOLD_HEART_IMG = [heartImage(0, true), heartImage(1, true), heartImage(2, 
 const healthEl = document.getElementById('health');
 const hurtEl = document.getElementById('hurt');
 const deathEl = document.getElementById('death');
+// Hungerleiste (Keulen, von rechts nach links) und Luftblasen
+const SHANK = ['.....XXX.', '....XMMMX', '...XMLMMX', '..XMMMMX.', '.XBXMMX..', 'XWBXX....', '.XX......'];
+function shankImage(fill) {
+  const c = document.createElement('canvas'); c.width = 9; c.height = 7;
+  const ctx = c.getContext('2d');
+  SHANK.forEach((row, y) => [...row].forEach((ch, x) => {
+    if (ch === '.') return;
+    const filled = fill === 2 || (fill === 1 && x >= 4);
+    ctx.fillStyle = ch === 'X' ? '#2a1606' : !filled && ch !== 'X' ? '#4a3626' : { M: '#c0702e', L: '#e8a060', B: '#e8e0d0', W: '#ffffff' }[ch];
+    ctx.fillRect(x, y, 1, 1);
+  }));
+  return c.toDataURL();
+}
+const SHANK_IMG = [shankImage(0), shankImage(1), shankImage(2)];
+const BUBBLE_IMG = (() => {
+  const c = document.createElement('canvas'); c.width = 7; c.height = 7;
+  const ctx = c.getContext('2d');
+  for (let y = 0; y < 7; y++) for (let x = 0; x < 7; x++) {
+    const d = Math.hypot(x - 3, y - 3);
+    if (d > 3.2) continue;
+    ctx.fillStyle = d > 2.3 ? '#1a4aa0' : (x === 2 && y === 2) ? '#ffffff' : '#6fb4ff';
+    ctx.fillRect(x, y, 1, 1);
+  }
+  return c.toDataURL();
+})();
+const foodEl = document.getElementById('food');
+const airEl = document.getElementById('air');
+function renderFood() {
+  foodEl.innerHTML = '';
+  for (let i = 0; i < 10; i++) {
+    const img = new Image();
+    img.src = SHANK_IMG[Math.max(0, Math.min(2, player.food - i * 2))];
+    foodEl.append(img);
+  }
+}
+let lastAirShown = -1;
+function renderAir() {
+  const n = player.air >= MAX_AIR ? 0 : Math.ceil(player.air / MAX_AIR * 10);
+  if (n === lastAirShown) return;
+  lastAirShown = n;
+  airEl.innerHTML = '';
+  for (let i = 0; i < n; i++) { const img = new Image(); img.src = BUBBLE_IMG; airEl.append(img); }
+}
+
 function renderHealth() {
   healthEl.innerHTML = '';
   const hp = Math.ceil(player.hp);
@@ -4012,6 +4250,8 @@ let invMode = 'inventory';                  // 'inventory' | 'crafting' | 'furna
 let openFurnace = null;
 const craftGrid = new Array(9).fill(null);
 let craftRecipe = null;
+let craftSize = 3;   // 3 = Werkbank, 2 = Inventar im Überlebensmodus
+const gridSlots = () => craftSize === 2 ? [0, 1, 3, 4] : [0, 1, 2, 3, 4, 5, 6, 7, 8];
 const containerEl = document.getElementById('container');
 const invTitleEl = document.getElementById('inv-title');
 const craftGridEl = document.getElementById('craft-grid');
@@ -4099,7 +4339,8 @@ function renderInventory() {
 function renderContainer() {
   if (invMode === 'crafting') {
     craftGridEl.innerHTML = '';
-    for (let i = 0; i < 9; i++) craftGridEl.append(slotEl(craftGrid, i));
+    craftGridEl.style.gridTemplateColumns = `repeat(${craftSize}, var(--slot))`;
+    for (const i of gridSlots()) craftGridEl.append(slotEl(craftGrid, i));
     fillSlot(craftOutEl, craftRecipe ? { id: craftRecipe.out[0], n: craftRecipe.out[1] } : null);
   } else if (invMode === 'furnace' && openFurnace) {
     const [input, fuel, out] = openFurnace.slots;
@@ -4148,12 +4389,17 @@ furOutEl.addEventListener('click', (e) => {
   afterSlotChange();
 });
 
+// Passt ein Rezept ins aktuelle Feld (2×2 oder 3×3)?
+function fitsGrid(r) {
+  if (craftSize === 3) return true;
+  return r.shapeless ? r.shapeless.length <= 4 : r.shape.length <= 2 && r.shape[0].length <= 2;
+}
 // Rezeptbuch: antippen legt die Zutaten aus dem Inventar in die Werkbank
 function renderRecipes() {
   recipesEl.innerHTML = '';
   const seen = new Set();
   for (const r of RECIPES) {
-    if (seen.has(r.out[0])) continue;
+    if (seen.has(r.out[0]) || !fitsGrid(r)) continue;
     seen.add(r.out[0]);
     const el = document.createElement('div');
     el.className = 'islot';
@@ -4175,7 +4421,7 @@ function returnGrid() {
 }
 function autofill(r) {
   // passende Variante suchen, für die alle Zutaten im Inventar sind
-  const variants = RECIPES.filter(v => v.out[0] === r.out[0]);
+  const variants = RECIPES.filter(v => v.out[0] === r.out[0] && fitsGrid(v));
   returnGrid();
   let missing = null;
   for (const v of variants) {
@@ -4220,13 +4466,17 @@ function openInventory(mode = 'inventory', furnace = null) {
   resetInput();
   invEl.style.display = 'flex';
   invItemEl.textContent = '';
+  // Überlebensmodus: Inventar mit 2×2-Crafting statt Auswahl
+  craftSize = 3;
+  let title = { crafting: '🛠️ Werkbank', furnace: '🔥 Ofen' }[invMode] || '';
+  if (invMode === 'inventory' && isSurvival()) { invMode = 'crafting'; craftSize = 2; title = '🎒 Inventar'; }
   const plain = invMode === 'inventory';
   document.querySelectorAll('.inv-tab').forEach(t => { t.style.display = plain ? '' : 'none'; });
   paletteEl.style.display = plain ? '' : 'none';
   containerEl.style.display = plain ? 'none' : 'block';
   document.getElementById('craft-ui').style.display = invMode === 'crafting' ? 'flex' : 'none';
   document.getElementById('furnace-ui').style.display = invMode === 'furnace' ? 'flex' : 'none';
-  invTitleEl.textContent = { crafting: '🛠️ Werkbank', furnace: '🔥 Ofen' }[invMode] || '';
+  invTitleEl.textContent = title;
   if (plain) renderPalette();
   if (invMode === 'crafting') { renderRecipes(); craftRecipe = matchRecipe(craftGrid); }
   renderContainer();
@@ -4286,6 +4536,7 @@ function startHold(action) {
 function stopHold() { mouseAction = null; }
 
 function toggleFly() {
+  if (isSurvival() && !player.flying) { showName('Fliegen geht nur im Kreativmodus'); return; }
   player.flying = !player.flying;
   player.vel[1] = 0;
   flyHint.style.display = player.flying ? 'block' : 'none';
@@ -4306,12 +4557,34 @@ document.getElementById('play').addEventListener('click', () => {
   else canvas.requestPointerLock();
 });
 document.getElementById('newworld').addEventListener('click', () => {
+  const box = document.getElementById('newworld-choice');
+  box.style.display = box.style.display === 'none' ? 'block' : 'none';
+});
+document.querySelectorAll('#newworld-choice button').forEach(btn => btn.addEventListener('click', () => {
   if (!confirm('Neue Welt erstellen? Die aktuelle Welt wird gelöscht.')) return;
   clearTimeout(saveTimer);
   skipSaveOnUnload = true;
-  try { localStorage.removeItem(SAVE_KEY); } catch {}
+  try { localStorage.setItem(SAVE_KEY, JSON.stringify({ seed: Math.floor(Math.random() * 2147483647), mode: btn.dataset.mode })); } catch {}
   location.reload();
-});
+}));
+const modeBtn = document.getElementById('mode');
+function setGameMode(mode) {
+  gameMode = mode;
+  document.body.classList.toggle('survival', mode === 'survival');
+  if (mode === 'survival') {
+    // Unendliche Stapel werden zu normalen Stapeln, Fliegen geht aus
+    for (const st of inventory) if (st && st.n === Infinity) st.n = maxStack(st.id);
+    if (player.flying) toggleFly();
+  } else {
+    player.hp = MAX_HP;
+    player.fire = 0;
+  }
+  modeBtn.textContent = mode === 'survival' ? 'Spielmodus: 🗡️ Überleben' : 'Spielmodus: 🧱 Kreativ';
+  renderHotbar();
+  renderHealth();
+  renderFood();
+}
+modeBtn.addEventListener('click', () => { setGameMode(isSurvival() ? 'creative' : 'survival'); saveGame(); });
 canvas.addEventListener('click', () => { if (!IS_TOUCH && !locked) canvas.requestPointerLock(); });
 
 document.addEventListener('pointerlockchange', () => {
@@ -4539,6 +4812,8 @@ if (saved?.player) {
   player.pitch = sp.pitch || 0;
   player.flying = !!sp.flying;
   if (typeof saved.hp === 'number' && saved.hp > 0) player.hp = Math.min(MAX_HP, saved.hp);
+  if (typeof saved.food === 'number') { player.food = saved.food; player.saturation = saved.saturation ?? 0; }
+  if (saved.mode === 'survival') player.flying = false;
   flyHint.style.display = player.flying ? 'block' : 'none';
   document.getElementById('t-fly').classList.toggle('on', player.flying);
 } else {
@@ -4558,8 +4833,9 @@ function preloadAround() {
 }
 preloadAround();
 spawnEndEntities();
+setGameMode(gameMode);
 // Zugriff für Tests/Entwicklung: index.html?debug
-if (new URLSearchParams(location.search).has('debug')) window.blockwelt = { mobs, Mob, player, get world() { return world; }, overworld, nether, end, endState, travelEnd, placeFire, fires, crystals, pearls, travel, fireballs, shootFireball, damagePlayer, inventory, addItem, drops, Drop, I, B, ITEMS, openInventory, closeInventory, primeTNT, meshChunk, BLOCK_ORDER, furnaces, RECIPES, craftGrid, matchRecipe, get target() { return target; } };
+if (new URLSearchParams(location.search).has('debug')) window.blockwelt = { mobs, Mob, player, get world() { return world; }, overworld, nether, end, endState, travelEnd, placeFire, fires, crystals, pearls, travel, fireballs, shootFireball, damagePlayer, inventory, addItem, drops, Drop, I, B, ITEMS, openInventory, closeInventory, primeTNT, meshChunk, BLOCK_ORDER, setGameMode, breakTime, canHarvest, get gameMode() { return gameMode; }, furnaces, RECIPES, craftGrid, matchRecipe, get target() { return target; } };
 player.fallPeak = player.pos[1];
 renderHealth();
 camera.position.set(player.pos[0], player.pos[1] + EYE, player.pos[2]);
@@ -4593,6 +4869,7 @@ renderer.setAnimationLoop(() => {
   if (portalAnim > 0.08) { portalAnim = 0; drawPortal(performance.now() / 1000); drawFire(performance.now() / 1000); }
   attackCd = Math.max(0, attackCd - dt);
   updateTarget();
+  if (running) updateMining(dt);
 
   if (mouseAction && isActive()) {
     mouseRepeat -= dt;
@@ -4613,7 +4890,7 @@ renderer.setAnimationLoop(() => {
       `Chunk: ${Math.floor(p[0] / CHUNK)}, ${Math.floor(p[2] / CHUNK)}  geladen: ${world.chunks.size}\n` +
       `Uhrzeit: ${String(hours).padStart(2, '0')}:${String(mins).padStart(2, '0')}\n` +
       `Seed: ${seed}  Dimension: ${{ nether: 'Nether', end: 'End', overworld: 'Oberwelt' }[world.dim]}\n` +
-      `Mobs: ${mobs.length}  Leben: ${player.hp}/${MAX_HP}\n` +
+      `Modus: ${isSurvival() ? 'Überleben' : 'Kreativ'}  Mobs: ${mobs.length}  Leben: ${Math.ceil(player.hp)}/${MAX_HP}  Hunger: ${player.food}\n` +
       (targetMob ? `Ziel: ${targetMob.def.name} (${targetMob.hp} HP)` :
        target ? `Ziel: ${BLOCKS[target.id].name} (${target.x}, ${target.y}, ${target.z})` : '');
   }

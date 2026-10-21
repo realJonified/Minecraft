@@ -2,6 +2,8 @@
 
 Ein Minecraft-ähnliches Voxel-Spiel, das komplett im Browser läuft (Three.js, eine einzige `index.html`).
 
+Inspiriert vom Original: **[Minecraft](https://www.minecraft.net/de-de)** von Mojang Studios. BlockWelt ist ein inoffizielles Fan-Projekt und steht in keiner Verbindung zu Mojang oder Microsoft.
+
 ## Starten
 
 `index.html` doppelklicken – fertig. (Three.js wird per CDN geladen, eine Internetverbindung ist also nötig.)
@@ -15,6 +17,15 @@ python3 -m http.server
 
 Über GitHub Pages lässt sich das Spiel auch direkt online spielen (Settings → Pages → Branch auswählen).
 
+## Spielmodi
+
+- **🗡️ Überleben** (Standard für neue Welten): Du startest mit leerem Inventar und musst alles selbst abbauen und herstellen. Blöcke abbauen dauert je nach Härte (gedrückt halten, Risse zeigen den Fortschritt), Spitzhacke, Axt und Schaufel machen es schneller. Stein und Erze lassen nur mit der passenden Spitzhacke etwas fallen (Eisen braucht Stein, Gold/Diamant/Redstone/Smaragd brauchen Eisen, Obsidian braucht Diamant). Dazu Hungerleiste, Ertrinken, Fallschaden – und beim Tod fällt dein Inventar auf den Boden (5 Minuten Zeit, es wieder zu holen). Im Inventar gibt es ein 2×2-Crafting-Feld für Bretter, Stöcke und die Werkbank. Kein Fliegen.
+- **🧱 Kreativ**: Alle Blöcke und Items unbegrenzt aus der Auswahl, sofortiges Abbauen, Fliegen, unverwundbar.
+
+Den Modus wählst du beim Erstellen einer neuen Welt oder jederzeit im Pausenmenü („Spielmodus“).
+
+**Erste Schritte im Überleben:** Baum abbauen → im Inventar (E) Bretter, Stöcke und eine Werkbank herstellen → Holzspitzhacke → Stein abbauen → Steinwerkzeuge und Ofen → Erze suchen, schmelzen und Fleisch braten.
+
 ## Features
 
 - Unendliche, prozedural generierte Welt (Simplex-Noise mit Seed): Wiesen, Berge mit Schneegipfeln, Strände, Seen und Meere, Höhlen
@@ -25,7 +36,8 @@ python3 -m http.server
 - Essen heilt (Rechtsklick bzw. 🧱 gedrückt halten). Goldener Apfel und der OP **Verzauberte Goldene Apfel** wie im echten Minecraft: Regeneration II, Absorption IV (goldene Herzen), Resistenz und Feuerresistenz
 - **Werkbank** (Rechtsklick drauf): 3×3-Crafting mit Rezeptbuch – ein Tipp auf ein Rezept legt die Zutaten automatisch ein. Bretter, Stöcke, Werkbank, Ofen, Schwerter (Holz bis Diamant), Goldene Äpfel, TNT, Feuerzeug, Erzblöcke und mehr
 - **Ofen** (Rechtsklick drauf): oben Zutat, unten Brennstoff (Kohle, Holzkohle, Holz). Brät Fleisch, schmilzt Erze zu Barren, Sand zu Glas, Bruchstein zu Stein, Holz zu Holzkohle … Der Ofen leuchtet, solange er brennt, und arbeitet auch weiter, wenn das Fenster zu ist
-- Abgebaute Blöcke lassen etwas fallen (Stein → Bruchstein, Kohleerz → Kohle, Diamanterz → Diamant, Kies → manchmal Feuerstein …)
+- Werkzeuge: Spitzhacke, Axt und Schaufel aus Holz, Stein, Eisen, Gold und Diamant
+- Abgebaute Blöcke lassen im Überlebensmodus etwas fallen (Stein → Bruchstein, Kohleerz → Kohle, Diamanterz → Diamant, Kies → manchmal Feuerstein …)
 - Schwerter machen mehr Schaden (Holz 5, Stein 6, Eisen 7, Diamant 8)
 - TNT: abbauen zündet es, Explosionen lösen Kettenreaktionen aus (Obsidian ist sprengsicher)
 - **Der Nether**: Rahmen aus Obsidian bauen (mind. 4×5), mit dem Feuerzeug anzünden, 2 Sekunden reinstellen. Dort warten Netherrack-Höhlen, ein riesiger Lavasee, Seelensand, Magmablöcke, Leuchtstein-Trauben, Netherquarz- und Nethergolderz. Ein Block im Nether entspricht 8 Blöcken in der Oberwelt; auf der anderen Seite wird automatisch ein Portal gebaut
