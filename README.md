@@ -19,7 +19,12 @@ python3 -m http.server
 
 - Unendliche, prozedural generierte Welt (Simplex-Noise mit Seed): Wiesen, Berge mit Schneegipfeln, Strände, Seen und Meere, Höhlen
 - Bäume, die über Chunk-Grenzen hinweg wachsen
-- Blöcke abbauen und setzen (Gras, Erde, Stein, Bruchstein, Bretter, Holz, Glas, Ziegel, Sand, Laub, Schnee)
+- Über 65 Blöcke mit eigenen 16×16-Pixel-Texturen: Erze (Kohle, Eisen, Gold, Redstone, Lapislazuli, Diamant, Smaragd), Edelsteinblöcke, Birke & Fichte, Bücherregal, Werkbank, Ofen, TNT, Kürbisse, Leuchtstein, 16 Wollfarben und mehr
+- Auswahl & Inventar (Taste E bzw. 🎒): jeden Block und jedes Item aus der Auswahl nehmen und in Leiste/Rucksack legen
+- Tiere droppen Beute (Fleisch, Leder, Wolle, Federn), Zombies verrottetes Fleisch, Creeper Schwarzpulver – einfach drüberlaufen zum Einsammeln
+- Essen heilt (Rechtsklick bzw. 🧱 gedrückt halten). Goldener Apfel und der OP **Verzauberte Goldene Apfel** wie im echten Minecraft: Regeneration II, Absorption IV (goldene Herzen), Resistenz und Feuerresistenz
+- TNT: abbauen zündet es, Explosionen lösen Kettenreaktionen aus (Obsidian ist sprengsicher)
+- Erzadern, Granit/Diorit/Andesit, Kies- und Tonböden im Meer, Sandstein unter Stränden
 - Spielerphysik mit Schwerkraft, Springen, Kollision, Schwimmen und Sprinten
 - Flugmodus
 - Tiere: Schweine, Kühe, Schafe und Hühner laufen in kleinen Herden herum und flüchten, wenn man sie schlägt
@@ -41,11 +46,12 @@ python3 -m http.server
 | Leertaste | Springen / Schwimmen / Hochfliegen |
 | Shift | Sprinten / Runterfliegen |
 | Linksklick | Block abbauen / Tier oder Monster schlagen (gedrückt halten für mehrere) |
-| Rechtsklick | Block setzen |
+| Rechtsklick | Block setzen / Essen (gedrückt halten) |
+| E | Auswahl & Inventar |
 | Mittelklick | Anvisierten Block in die Hotbar übernehmen |
 | 1–9 / Mausrad | Block wechseln |
 | F | Flugmodus an/aus |
 | F3 | Debug-Infos (FPS, Position, Seed) |
 | Esc | Pause |
 
-Auf Handy und Tablet: Joystick links zum Laufen, Wischen zum Umsehen, ⛏ abbauen/schlagen, 🧱 platzieren, ⬆ springen, ⬇ runterfliegen, ✈ Flugmodus, ⏸ Pause.
+Auf Handy und Tablet: Joystick links zum Laufen, Wischen zum Umsehen, ⛏ abbauen/schlagen, 🧱 platzieren, ⬆ springen, ⬇ runterfliegen, ✈ Flugmodus, 🎒 Auswahl & Inventar, ⏸ Pause. 🧱 mit Essen in der Hand gedrückt halten = essen.
