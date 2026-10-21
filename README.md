@@ -52,6 +52,26 @@ Helm, Brustpanzer, Beinschutz und Stiefel aus **Leder, Ketten, Eisen, Gold, Diam
 
 **Erste Schritte im Überleben:** Baum abbauen → im Inventar (E) Bretter, Stöcke und eine Werkbank herstellen → Holzspitzhacke → Stein abbauen → Steinwerkzeuge und Ofen → Erze suchen, schmelzen und Fleisch braten.
 
+### Dörfer & Dorfbewohner
+
+In der Oberwelt gibt es **Dörfer** mit Brunnen, Kieswegen, Laternen, Häusern (Werkbank, Ofen, Strohballen drin), Bibliotheken mit Bücherregalen und Feldern mit Kürbissen und Melonen. Neue Welten starten direkt im nächsten Dorf.
+
+Die **Dorfbewohner** laufen im Dorf herum und bleiben stehen, wenn du näher kommst. **Rechtsklick** (Touch: 🧱) auf einen Dorfbewohner öffnet den **Handel**: Du bezahlst mit **Smaragden** (aus Smaragderz in den Bergen) oder verkaufst Dinge, um Smaragde zu bekommen. Je nach Beruf gibt es andere Angebote:
+
+| Beruf | Kleidung | Kauft | Verkauft |
+|---|---|---|---|
+| Bauer | braun, Strohhut | Kürbisse, Melonen | Brot, Äpfel, Strohballen, Goldener Apfel |
+| Bibliothekar | weiß | Bücherregale | Glas, Bücherregale, Leuchtstein, Enderperle, Enderauge |
+| Schmied | grau, Schürze | Kohle, Eisenbarren | Eisenspitzhacke, Eisenschwert, Eisenbrustpanzer, Diamantspitzhacke |
+| Geistlicher | lila | Verrottetes Fleisch, Goldbarren | Redstone, Lapislazuli, Leuchtstein, Enderperle |
+| Metzger | hell, Schürze | rohes Fleisch, Kohle | gebratenes Fleisch, Steak |
+
+Neu ist auch **Brot** (1 Strohballen = 3 Brot in der Werkbank).
+
+### Sound & Musik
+
+Alle Geräusche werden live im Browser erzeugt (keine Audiodateien): Abbauen, Setzen und Schritte klingen je nach Material (Stein, Holz, Erde, Sand, Kies, Glas, Laub, Wolle) verschieden. Dazu kommen Tiergeräusche (Schwein, Kuh, Schaf, Huhn), Zombies, Creeper-Zischen, Endermen, Ghasts, der Enderdrache und das „Hrmm“ der Dorfbewohner. Außerdem Explosionen, Essen, Aufsammeln, Platschen, Feuerzeug, Portale, Schaden und ruhige Klaviermusik ab und zu. Im Menü lassen sich **🔊 Sound** und **🎵 Musik** getrennt ein- und ausschalten.
+
 ## Features
 
 - Unendliche, prozedural generierte Welt (Simplex-Noise mit Seed): Wiesen, Berge mit Schneegipfeln, Strände, Seen und Meere, Höhlen
@@ -96,7 +116,7 @@ Helm, Brustpanzer, Beinschutz und Stiefel aus **Leder, Ketten, Eisen, Gold, Diam
 | Leertaste | Springen / Schwimmen / Hochfliegen |
 | Shift | Sprinten / Runterfliegen |
 | Linksklick | Block abbauen / Tier oder Monster schlagen (gedrückt halten für mehrere) |
-| Rechtsklick | Block setzen / Essen (gedrückt halten) |
+| Rechtsklick | Block setzen / Essen (gedrückt halten) / mit Dorfbewohnern handeln |
 | E | Auswahl & Inventar |
 | Mittelklick | Anvisierten Block in die Hotbar übernehmen |
 | 1–9 / Mausrad | Block wechseln |
