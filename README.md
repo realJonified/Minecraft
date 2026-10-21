@@ -20,7 +20,7 @@ python3 -m http.server
 ## Spielmodi
 
 - **🗡️ Überleben** (Standard für neue Welten): Du startest mit leerem Inventar und musst alles selbst abbauen und herstellen. Blöcke abbauen dauert je nach Härte (gedrückt halten, Risse zeigen den Fortschritt), Spitzhacke, Axt und Schaufel machen es schneller. Stein und Erze lassen nur mit der passenden Spitzhacke etwas fallen (Eisen braucht Stein, Gold/Diamant/Redstone/Smaragd brauchen Eisen, Obsidian braucht Diamant). Dazu Hungerleiste, Ertrinken, Fallschaden – und beim Tod fällt dein Inventar auf den Boden (5 Minuten Zeit, es wieder zu holen). Im Inventar gibt es ein 2×2-Crafting-Feld für Bretter, Stöcke und die Werkbank. Kein Fliegen.
-- **🧱 Kreativ**: Alle Blöcke und Items unbegrenzt aus der Auswahl, sofortiges Abbauen, Fliegen, unverwundbar.
+- **🧱 Kreativ**: Alle Blöcke und Items unbegrenzt aus der Auswahl (sortiert nach 🧱 Bauen, 🌲 Natur, 🎨 Farben, 🏮 Deko, 🍎 Items, mit Suchfeld), sofortiges Abbauen, Fliegen (F oder zweimal Leertaste), unverwundbar.
 
 Den Modus wählst du beim Erstellen einer neuen Welt oder jederzeit im Pausenmenü („Spielmodus“).
 
@@ -30,7 +30,8 @@ Den Modus wählst du beim Erstellen einer neuen Welt oder jederzeit im Pausenmen
 
 - Unendliche, prozedural generierte Welt (Simplex-Noise mit Seed): Wiesen, Berge mit Schneegipfeln, Strände, Seen und Meere, Höhlen
 - Bäume, die über Chunk-Grenzen hinweg wachsen
-- Über 65 Blöcke mit eigenen 16×16-Pixel-Texturen: Erze (Kohle, Eisen, Gold, Redstone, Lapislazuli, Diamant, Smaragd), Edelsteinblöcke, Birke & Fichte, Bücherregal, Werkbank, Ofen, TNT, Kürbisse, Leuchtstein, 16 Wollfarben und mehr
+- **Hochauflösende 32×32-Pixel-Texturen** für alle Blöcke und Mobs
+- Über 150 Blöcke, u. a. Tropen-, Akazien- und Schwarzeichenholz, polierte Steine, Steinziegel-Varianten, Tiefenschiefer, Tuffstein, Calcit, Basalt, Schwarzstein, Prismarin, Seelaterne, Pilzlicht, Amethyst, Kupfer, Moos, Schwamm, Schlammziegel, Plattenspieler, Notenblock, 16 Farben Beton und 16 Farben Keramik. Dazu Erze (Kohle, Eisen, Gold, Redstone, Lapislazuli, Diamant, Smaragd), Edelsteinblöcke, Birke & Fichte, Bücherregal, Werkbank, Ofen, TNT, Kürbisse, Leuchtstein, 16 Wollfarben und mehr
 - Auswahl & Inventar (Taste E bzw. 🎒): jeden Block und jedes Item aus der Auswahl nehmen und in Leiste/Rucksack legen
 - Tiere droppen Beute (Fleisch, Leder, Wolle, Federn), Zombies verrottetes Fleisch, Creeper Schwarzpulver – einfach drüberlaufen zum Einsammeln
 - Essen heilt (Rechtsklick bzw. 🧱 gedrückt halten). Goldener Apfel und der OP **Verzauberte Goldene Apfel** wie im echten Minecraft: Regeneration II, Absorption IV (goldene Herzen), Resistenz und Feuerresistenz
@@ -46,6 +47,7 @@ Den Modus wählst du beim Erstellen einer neuen Welt oder jederzeit im Pausenmen
 - **Das End**: 12 Endportalrahmen als Ring (5×5 ohne Ecken) legen, in jeden ein Enderauge (Enderperle + Leuchtstein) setzen und ins Portal springen. Dort: schwebende Endstein-Insel über dem Nichts, Obsidian-Säulen mit Endkristallen und der **Enderdrache** mit Bossleiste. Kristalle zerstören (sie heilen den Drachen), Drachen besiegen – dann erscheinen Ausgangsportal und Drachenei
 - **Endermen**: im End und selten nachts in der Oberwelt. Nicht in die Augen schauen! Sie teleportieren sich und droppen Enderperlen, die man werfen kann, um sich zu teleportieren
 - Lava (auch tief in den Höhlen der Oberwelt) setzt dich in Brand – Feuerresistenz vom Verzauberten Goldenen Apfel schützt
+- Neue Landschaft: Dschungel, Savannen mit Akazien, dunkle Wälder, Podsol in Nadelwäldern, grobe Erde, Tiefenschiefer ganz unten, Schwarzstein und Basalt im Nether
 - Erzadern, Granit/Diorit/Andesit, Kies- und Tonböden im Meer, Sandstein unter Stränden
 - Spielerphysik mit Schwerkraft, Springen, Kollision, Schwimmen und Sprinten
 - Flugmodus
