@@ -68,6 +68,14 @@ Die **Dorfbewohner** sehen aus wie im echten Minecraft: große Nase, durchgehend
 
 Neu ist auch **Brot** (1 Strohballen = 3 Brot in der Werkbank).
 
+### Monster, Sonne & Nacht
+
+Nachts erscheinen **Zombies**, **Skelette**, **Spinnen**, **Creeper** und selten **Endermen**.
+
+- **☀️ Am Tag verbrennen** Zombies, Skelette und Endermen, sobald die Sonne sie trifft (man sieht die Flammen). Im Schatten, unter Bäumen, in Höhlen oder im Wasser sind sie sicher – genau wie im echten Minecraft. **Spinnen und Creeper verbrennen nicht.**
+- **💀 Skelette** halten Abstand und schießen mit Pfeilen auf dich. Sie droppen Knochen (9 Knochen = Knochenblock).
+- **🕷️ Spinnen** sind schnell, **klettern Wände hoch** und sind tagsüber friedlich – außer man greift sie an. Sie droppen Fäden (4 Fäden = weiße Wolle) und manchmal ein Spinnenauge.
+
 ### Truhen
 
 **Truhe** herstellen: 8 Holzbretter im Ring (Mitte frei) in der Werkbank. Aufstellen wie einen Block – der Verschluss zeigt zu dir. **Rechtsklick** öffnet sie: 27 Plätze zum Einlagern. **Shift-Klick** verschiebt einen ganzen Stapel zwischen Truhe und Inventar. Wird eine Truhe abgebaut, fällt ihr Inhalt heraus. In großen Dorfhäusern stehen Truhen mit Beute (Brot, Äpfel, Smaragde, Eisen, Kohle und mit Glück Gold, Diamanten oder ein Goldener Apfel).

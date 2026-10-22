@@ -591,6 +591,9 @@ item(135, 'EYE_OF_ENDER', 'Enderauge');
 item(151, 'COPPER_INGOT', 'Kupferbarren');
 item(154, 'BREAD', 'Brot', { heal: 5 });
 item(155, 'BED', 'Bett', { stack: 1 });
+item(334, 'BONE', 'Knochen');
+item(335, 'STRING', 'Faden');
+item(336, 'SPIDER_EYE', 'Spinnenauge', { heal: 2 });
 // Werkzeuge: tier = Abbaustufe (1 Holz/Gold, 2 Stein, 3 Eisen, 4 Diamant), speed = Abbau-Tempo
 // Haltbarkeit je Material (wie in Minecraft)
 const DURABILITY = { WOODEN: 59, STONE: 131, IRON: 250, GOLDEN: 32, DIAMOND: 1561, NETHERITE: 2031 };
@@ -1532,6 +1535,12 @@ const ITEM_ART = {
   tear: [
     '................', '................', '.......o........', '......owo.......', '......owo.......', '.....owwco......', '.....owwco......', '....owwwcco.....',
     '....owwwcco.....', '....owwccco.....', '.....occco......', '......ooo.......', '................', '................', '................', '................'],
+  web: [
+    '................', '..........ww....', '.........w..w...', '........w...w...', '.......w...w....', '......w...w.....', '.....w...w......', '....w...w.......',
+    '...w...w........', '..w...w.........', '..w..w..........', '...ww...........', '................', '................', '................', '................'],
+  eye: [
+    '................', '................', '................', '................', '.....oooooo.....', '....orrrrrro....', '...orrRRRRrro...', '...orRRkkRRro...',
+    '...orRRkkRRro...', '...orrRRRRrro...', '....orrrrrro....', '.....oooooo.....', '................', '................', '................', '................'],
   bed: [
     '................', '................', '................', '................', '................', '................', 'oo.......oooooo.', 'owwwwoooorrrrrro',
     'owwwwrrrrrrrrrro', 'owwwwrrrrrrrrrro', 'ooooooooooooooo.', 'obbbbbbbbbbbbbbo', 'o.o..........o.o', 'o.o..........o.o', '................', '................'],
@@ -1593,6 +1602,9 @@ const ITEM_LOOK = {
   NETHERITE_SCRAP: ['lump', { o: '#1e1612', h: '#7a5e4a', c: '#4e3a2c', d: '#3a2a20' }],
   NETHERITE_INGOT: ['ingot', { h: '#8a8284', w: '#5a5456', m: '#454042', o: '#1e1a1c' }],
   ...Object.fromEntries(ARMOR_MATS.flatMap(([mat]) => ARMOR_PIECES.map(piece => [mat + '_' + piece, [piece.toLowerCase(), ARMOR_COLORS[mat]]]))),
+  BONE: ['stick', { o: '#8a8670', s: '#f0ecd8' }],
+  STRING: ['web', { w: '#f4f4f4' }],
+  SPIDER_EYE: ['eye', { o: '#4a0a14', r: '#b8263c', R: '#e04a5e', k: '#200408' }],
   BED: ['bed', { o: '#3a2412', w: '#f2eee6', r: '#b42622', b: '#8a643a' }],
   BREAD: ['bread', { o: '#5a3410', h: '#d8a050', l: '#f2cc80', b: '#a86a28' }],
   ENDER_PEARL: ['orb', { o: '#0a2a26', c: '#1a6b5e', h: '#6fe0c8' }],
@@ -2553,6 +2565,7 @@ const fireTex = new THREE.CanvasTexture(fireCanvas);
 fireTex.magFilter = THREE.NearestFilter; fireTex.minFilter = THREE.NearestFilter;
 fireTex.generateMipmaps = false; fireTex.colorSpace = THREE.SRGBColorSpace;
 const fireMat = new THREE.MeshBasicMaterial({ map: fireTex, alphaTest: 0.4, side: THREE.DoubleSide });
+const flameSpriteMat = new THREE.SpriteMaterial({ map: fireTex, alphaTest: 0.4, depthWrite: false });
 function drawFire(t) {
   for (let x = 0; x < 32; x++) {
     const h = 18 + Math.sin(x * 0.85 + t * 9) * 5 + Math.sin(x * 0.3 - t * 5.3) * 5 + Math.sin(x * 2.1 + t * 13) * 1.5 + (x < 2 || x > 29 ? -8 : 0);
@@ -3114,7 +3127,7 @@ const MOB_TYPES = {
     },
   },
   zombie: {
-    name: 'Zombie', melee: 3, drops: [[I.ROTTEN_FLESH, 0, 2], [I.IRON_INGOT, 1, 1, 0.05]], hp: 20, speed: 2.2, hw: 0.3, h: 1.95, hostile: true,
+    name: 'Zombie', burnsInSun: true, melee: 3, drops: [[I.ROTTEN_FLESH, 0, 2], [I.IRON_INGOT, 1, 1, 0.05]], hp: 20, speed: 2.2, hw: 0.3, h: 1.95, hostile: true,
     build(m, r) {
       const skin = skinTex('zombie', [92, 140, 76], 0.15);
       const face = skinTex('zombie-face', [92, 140, 76], 0.15, ctx => { px(ctx, '#3d5a32', 0, 0, 8, 2); px(ctx, '#1d2a18', 1, 3, 2, 1); px(ctx, '#1d2a18', 5, 3, 2, 1); px(ctx, '#4a6b3c', 3, 5, 2, 1); });
@@ -3189,7 +3202,7 @@ MOB_TYPES.ghast = {
   },
 };
 MOB_TYPES.enderman = {
-  name: 'Enderman', drops: [[I.ENDER_PEARL, 0, 1]], hp: 40, speed: 3, hw: 0.3, h: 2.9, neutral: true, melee: 7, teleports: true,
+  name: 'Enderman', burnsInSun: true, drops: [[I.ENDER_PEARL, 0, 1]], hp: 40, speed: 3, hw: 0.3, h: 2.9, neutral: true, melee: 7, teleports: true,
   build(m, r) {
     const skin = skinTex('enderman', [22, 22, 26], 0.25);
     const face = skinTex('enderman-face', [22, 22, 26], 0.25, ctx => { px(ctx, '#e079fa', 0, 4, 3, 1); px(ctx, '#cc00fa', 1, 4); px(ctx, '#e079fa', 5, 4, 3, 1); px(ctx, '#cc00fa', 6, 4); });
@@ -3328,6 +3341,50 @@ MOB_TYPES.villager = {
   },
 };
 const hex2rgb = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+MOB_TYPES.skeleton = {
+  name: 'Skelett', burnsInSun: true, ranged: true, drops: [[I.BONE, 0, 2]], hp: 20, speed: 2.2, hw: 0.3, h: 1.99, hostile: true,
+  build(m, r) {
+    const bone = skinTex('skeleton', [196, 196, 190], 0.1);
+    const ribs = skinTex('skeleton-ribs', [196, 196, 190], 0.1, ctx => { px(ctx, '#3a3a3a', 0, 0, 8, 8); for (let y = 1; y < 7; y += 2) px(ctx, '#c8c8c2', 1, y, 6, 1); px(ctx, '#c8c8c2', 3, 0, 2, 8); });
+    const skull = skinTex('skeleton-face', [200, 200, 194], 0.1, ctx => {
+      px(ctx, '#1a1a1a', 1, 3, 2, 2); px(ctx, '#1a1a1a', 5, 3, 2, 2); px(ctx, '#3a3a3a', 3, 5, 2, 1);
+      px(ctx, '#2a2a2a', 1, 7, 6, 1); px(ctx, '#c8c8c2', 2, 7); px(ctx, '#c8c8c2', 4, 7); px(ctx, '#c8c8c2', 6, 7);
+    });
+    const bowTex = skinTex('skeleton-bow', [110, 76, 40], 0.15);
+    for (const x of [-2, 2]) m.legs.push(addPart(m, r, [2, 12, 2], [x, 12, 0], [0, -6, 0], bone));
+    addPart(m, r, [8, 12, 4], [0, 18, 0], [0, 0, 0], withFront(ribs, ribs));
+    for (const x of [-5, 5]) {
+      const arm = addPart(m, r, [2, 12, 2], [x, 22, 0], [0, -5, 0], bone);
+      arm.rotation.x = -Math.PI / 2;
+      m.arms.push(arm);
+      if (x < 0) { addPart(m, arm, [1, 14, 1], [0, -11, 1.5], [0, 0, 0], bowTex); }   // Bogen
+    }
+    addPart(m, r, [8, 8, 8], [0, 24, 0], [0, 4, 0], withFront(bone, skull));
+  },
+};
+MOB_TYPES.spider = {
+  name: 'Spinne', climbs: true, spider: true, melee: 2, drops: [[I.STRING, 0, 2], [I.SPIDER_EYE, 0, 1, 0.33]], hp: 16, speed: 3, hw: 0.65, h: 0.9, hostile: true,
+  build(m, r) {
+    const skin = skinTex('spider', [52, 44, 40], 0.25, (ctx, rnd) => { for (let i = 0; i < 6; i++) px(ctx, '#2a2420', rnd() * 8 | 0, rnd() * 8 | 0); });
+    const face = skinTex('spider-face', [52, 44, 40], 0.25, ctx => {
+      px(ctx, '#e01818', 1, 2, 2, 2); px(ctx, '#e01818', 5, 2, 2, 2);   // große rote Augen
+      px(ctx, '#c01010', 0, 1); px(ctx, '#c01010', 7, 1); px(ctx, '#c01010', 2, 5); px(ctx, '#c01010', 5, 5);
+      px(ctx, '#1a1410', 3, 6, 2, 2);
+    });
+    addPart(m, r, [10, 8, 12], [0, 8, -6], [0, 0, 0], skin);   // Hinterleib
+    addPart(m, r, [6, 6, 6], [0, 7, 3], [0, 0, 0], skin);
+    addPart(m, r, [8, 8, 8], [0, 7, 9], [0, 0, 0], withFront(skin, face));
+    m.spiderLegs = [];
+    for (let i = 0; i < 4; i++) for (const side of [-1, 1]) {
+      const leg = addPart(m, r, [16, 2, 2], [side * 3, 7, 4 - i * 2], [side * 8, 0, 0], skin);
+      leg.rotation.z = -side * 0.4;
+      leg.baseY = (i - 1.5) * 0.35 * side;
+      leg.rotation.y = leg.baseY;
+      leg.side = side; leg.idx = i;
+      m.spiderLegs.push(leg);
+    }
+  },
+};
 const ANIMALS = ['pig', 'cow', 'sheep', 'chicken'];
 const MAX_ANIMALS = 10, MAX_HOSTILE = 8;
 
@@ -3403,6 +3460,7 @@ class Mob {
       // ein getroffener Piglin hetzt alle in der Nähe auf
       if (byPlayer && !peaceful) for (const m of mobs) if (m.type === this.type && Math.hypot(m.pos[0] - this.pos[0], m.pos[2] - this.pos[2]) < 16) m.angry = 30;
     } else if (!this.def.hostile) { this.panic = 5; this.moveDir = [dx / l, dz / l]; }
+    else if (this.def.spider && byPlayer) this.angry = 30;
     if (this.hp <= 0) this.deadTime = 0;
     else if (this.def.teleports) this.teleportRandom();
     return true;
@@ -3540,6 +3598,18 @@ class Mob {
     if (this.deadTime > 4) { this.remove(); onDragonDefeated(); }
   }
 
+  // Flammen um brennende Mobs
+  updateFlames() {
+    const burning = this.burnTimer > 0 && this.alive;
+    if (burning && !this.flames) {
+      this.flames = new THREE.Sprite(flameSpriteMat);
+      this.flames.scale.set(this.def.hw * 2 + 0.5, this.def.h + 0.3, 1);
+      this.flames.position.y = this.def.h / 2;
+      this.root.add(this.flames);
+    }
+    if (this.flames) this.flames.visible = burning;
+  }
+
   // Dorfbewohner: Kopf folgt dem Spieler, nickt (ja) oder schüttelt sich (nein)
   animateHead(dt, dx, dz, dist) {
     const h = this.head;
@@ -3611,11 +3681,21 @@ class Mob {
       const hx = p[0] - camera.position.x, hy = p[1] + 2.6 - camera.position.y, hz = p[2] - camera.position.z, hl = Math.hypot(hx, hy, hz);
       if ((hx * rayDir.x + hy * rayDir.y + hz * rayDir.z) / hl > 0.985) this.angry = 30;
     }
-    const chasing = (d.hostile || (d.neutral && this.angry > 0)) && !player.dead && dist < 32;
+    const calm = d.spider && daylight > 0.5 && this.angry <= 0;   // Spinnen sind tagsüber friedlich
+    const chasing = ((d.hostile && !calm) || (d.neutral && this.angry > 0)) && !player.dead && dist < 32;
     if (chasing) {
       this.moveDir = [dx / hd, dz / hd];
       speed = d.speed;
-      if (d.melee) {
+      if (d.ranged) {
+        // Skelett: Abstand halten und mit Pfeilen schießen
+        if (hd < 5) this.moveDir = [-dx / hd, -dz / hd];
+        else if (hd < 11) speed = 0;
+        this.shootTimer -= dt;
+        if (this.shootTimer <= 0 && dist < 18 && lineOfSight([p[0], p[1] + 1.6, p[2]], [player.pos[0], player.pos[1] + 1.5, player.pos[2]])) {
+          shootArrow(this, dx, player.pos[1] + 1.2 - (p[1] + 1.5), dz, hd);
+          this.shootTimer = 1.8 + Math.random() * 1.2;
+        }
+      } else if (d.melee) {
         if (hd < 0.9 + d.hw && Math.abs(dy) < 1.6 && this.attackCd <= 0) {
           damagePlayer(d.melee, p[0], p[2]);
           this.attackCd = 1;
@@ -3670,12 +3750,12 @@ class Mob {
       }
     }
 
-    // Zombies verbrennen in der Sonne
-    if (this.type === 'zombie') {
+    // Nachtmonster (Zombies, Skelette, Endermen) verbrennen in der Sonne – Spinnen und Creeper nicht
+    if (d.burnsInSun) {
       this.sunCheck -= dt;
       if (this.sunCheck <= 0) {
         this.sunCheck = 1;
-        if (daylight > 0.5 && !this.inWater && skyExposed(Math.floor(p[0]), p[1] + d.h, Math.floor(p[2]))) {
+        if (world.dim === 'overworld' && daylight > 0.5 && !this.inWater && skyExposed(Math.floor(p[0]), p[1] + d.h, Math.floor(p[2]))) {
           this.burnTimer = 1.2;
           this.hurt(2, p[0], p[2], 0);
         }
@@ -3702,7 +3782,8 @@ class Mob {
       if (moveBox(p, d.hw, d.h, 0, v[0] * sdt)) { v[0] = 0; blocked = true; }
       if (moveBox(p, d.hw, d.h, 2, v[2] * sdt)) { v[2] = 0; blocked = true; }
     }
-    if (blocked && speed > 0 && (this.onGround || this.inWater)) v[1] = this.inWater ? 5 : JUMP;
+    if (blocked && speed > 0 && d.climbs) v[1] = 3.5;   // Spinnen klettern Wände hoch
+    else if (blocked && speed > 0 && (this.onGround || this.inWater)) v[1] = this.inWater ? 5 : JUMP;
 
     // ---- Animation ----
     const hs = Math.hypot(v[0], v[2]);
@@ -3728,6 +3809,8 @@ class Mob {
     this.root.rotation.y = this.yaw;
     this.body.scale.setScalar(1 + Math.min(1, this.fuse / 1.5) * 0.18);
     if (d.villager) this.animateHead(dt, dx, dz, dist);
+    if (this.spiderLegs) this.spiderLegs.forEach(leg => { leg.rotation.y = leg.baseY + Math.sin(this.walkPhase * 2 + leg.idx * 1.6 + (leg.side > 0 ? 0 : Math.PI)) * 0.35 * Math.min(1, hs / d.speed); });
+    this.updateFlames();
 
     // ---- Farbe (Licht, Treffer, Zündung) ----
     let r = 1, g = 1, b = 1;
@@ -3859,6 +3942,8 @@ const sfx = (() => {
     zombie(w, t, k, p) { tone(w, t, 0.9, { wave: 'sawtooth', f: 105 * p * k, f2: 70 * p * k, vol: 0.3, lp: 450, attack: 0.1, vib: 6, vibF: 7 }); noise(w, t, 0.7, { type: 'lowpass', f: 500, vol: 0.12, attack: 0.1 }); },
     piglin(w, t, k, p) { for (let i = 0; i < 2; i++) tone(w, t + i * 0.16, 0.14, { wave: 'sawtooth', f: 160 * p * k, f2: 95 * p * k, vol: 0.28, lp: 700 }); },
     creeper(w, t, k) { if (k > 1) noise(w, t, 0.15, { f: 2000, vol: 0.3 }); },
+    skeleton(w, t, k) { for (let i = 0; i < 4; i++) noise(w, t + i * 0.05, 0.03, { f: 2800 * k * rp(0.3), q: 6, vol: 0.35 }); },
+    spider(w, t, k, p) { noise(w, t, 0.35, { type: 'highpass', f: 2500 * p * k, f2: 4000, vol: 0.18, attack: 0.03 }); for (let i = 0; i < 3; i++) noise(w, t + 0.08 * i, 0.025, { f: 1800 * k, q: 5, vol: 0.25 }); },
     enderman(w, t, k, p) { tone(w, t, 0.6, { wave: 'sawtooth', f: 90 * p * k, f2: 60, vol: 0.18, lp: 500, vib: 20, vibF: 13 }); },
     ghast(w, t, k, p) { tone(w, t, 1.2, { wave: 'sine', f: 640 * p * k, f2: 380 * p * k, vol: 0.25, vib: 25, vibF: 6, attack: 0.15 }); },
     dragon(w, t, k, p) { tone(w, t, 1.6, { wave: 'sawtooth', f: 85 * p * k, f2: 55, vol: 0.4, lp: 500, attack: 0.15, vib: 8, vibF: 9 }); noise(w, t, 1.4, { type: 'lowpass', f: 700, f2: 200, vol: 0.3, attack: 0.15 }); },
@@ -3930,6 +4015,7 @@ const sfx = (() => {
     splash(pos) { play(pos, 20, (w, t) => { noise(w, t, 0.6, { type: 'lowpass', f: 2400, f2: 300, vol: 0.5, attack: 0.01 }); }); },
     ignite(pos) { play(pos, 16, (w, t) => { tone(w, t, 0.05, { wave: 'square', f: 2600, vol: 0.08 }); noise(w, t + 0.03, 0.4, { f: 2500, f2: 900, q: 0.6, vol: 0.35, attack: 0.03 }); }); },
     chest(open) { play(null, 1, (w, t) => { tone(w, t, 0.35, { wave: 'sawtooth', f: open ? 140 : 190, f2: open ? 210 : 120, vol: 0.12, lp: 700 }); noise(w, t + (open ? 0.25 : 0.2), 0.1, { f: 600, q: 2, vol: 0.4 }); }); },
+    bow(pos) { play(pos, 24, (w, t) => { tone(w, t, 0.12, { wave: 'triangle', f: 320, f2: 180, vol: 0.2 }); noise(w, t, 0.18, { f: 1800, f2: 600, q: 1, vol: 0.25 }); }); },
     portal() { play(null, 1, (w, t) => { tone(w, t, 2.2, { wave: 'sawtooth', f: 110, f2: 440, vol: 0.12, lp: 1200, vib: 20, vibF: 7, attack: 0.4 }); noise(w, t, 2, { f: 600, f2: 2400, q: 4, vol: 0.2, attack: 0.5 }); }); },
     teleport(pos) { play(pos, 20, (w, t) => tone(w, t, 0.4, { f: 1300, f2: 250, vol: 0.2, vib: 40, vibF: 30 })); },
     shoot(pos) { play(pos, 40, (w, t) => noise(w, t, 0.6, { type: 'lowpass', f: 1200, f2: 200, vol: 0.5 })); },
@@ -3970,7 +4056,7 @@ function trySpawn(hostile) {
     if (world.getBlock(x, s.y + 2, z) !== B.AIR) continue;
     if (hostile) {
       const roll = Math.random();
-      const type = roll < 0.5 ? 'zombie' : roll < 0.85 ? 'creeper' : world.getBlock(x, s.y + 3, z) === B.AIR ? 'enderman' : 'zombie';
+      const type = roll < 0.35 ? 'zombie' : roll < 0.6 ? 'skeleton' : roll < 0.78 ? 'spider' : roll < 0.94 ? 'creeper' : world.getBlock(x, s.y + 3, z) === B.AIR ? 'enderman' : 'zombie';
       mobs.push(new Mob(type, x + 0.5, s.y + 1, z + 0.5));
     } else {
       // Tiere kommen in kleinen Herden
@@ -4171,6 +4257,51 @@ function updateFireballs(dt) {
         }
       }
     }
+  }
+}
+
+// ---------- Pfeile der Skelette ----------
+const arrows = [];
+const arrowGeo = new THREE.BoxGeometry(0.06, 0.06, 0.7);
+const arrowMat = new THREE.MeshBasicMaterial({ color: 0x8a6a40 });
+function lineOfSight(a, b) {
+  const d = Math.hypot(b[0] - a[0], b[1] - a[1], b[2] - a[2]), n = Math.ceil(d / 0.3);
+  for (let i = 1; i < n; i++) {
+    const t = i / n;
+    if (OPAQUE[world.getBlock(Math.floor(a[0] + (b[0] - a[0]) * t), Math.floor(a[1] + (b[1] - a[1]) * t), Math.floor(a[2] + (b[2] - a[2]) * t))]) return false;
+  }
+  return true;
+}
+function shootArrow(m, dx, dy, dz, hd) {
+  const speed = 22, t = hd / speed;
+  // etwas höher zielen, damit die Schwerkraft ausgeglichen wird, plus etwas Streuung
+  const vy = dy / t + 0.5 * 12 * t;
+  const pos = [m.pos[0] + dx / hd * 0.6, m.pos[1] + 1.5, m.pos[2] + dz / hd * 0.6];
+  const vel = [dx / hd * speed + (Math.random() - 0.5) * 1.5, vy + (Math.random() - 0.5) * 1.5, dz / hd * speed + (Math.random() - 0.5) * 1.5];
+  const mesh = new THREE.Mesh(arrowGeo, arrowMat);
+  scene.add(mesh);
+  arrows.push({ pos, vel, mesh, age: 0, stuck: false });
+  sfx.bow(m.pos);
+}
+function updateArrows(dt) {
+  for (const a of [...arrows]) {
+    a.age += dt;
+    if (a.age > (a.stuck ? 4 : 6)) { scene.remove(a.mesh); arrows.splice(arrows.indexOf(a), 1); continue; }
+    if (!a.stuck) {
+      a.vel[1] -= 12 * dt;
+      for (let s = 0; s < 3 && !a.stuck; s++) {
+        for (let k = 0; k < 3; k++) a.pos[k] += a.vel[k] * dt / 3;
+        if (SOLID[world.getBlock(Math.floor(a.pos[0]), Math.floor(a.pos[1]), Math.floor(a.pos[2]))]) { a.stuck = true; a.age = 0; sfx.hit(B.PLANKS, a.pos); }
+        const p = player.pos;
+        if (!a.stuck && Math.abs(a.pos[0] - p[0]) < 0.45 && Math.abs(a.pos[2] - p[2]) < 0.45 && a.pos[1] > p[1] && a.pos[1] < p[1] + PLAYER_H) {
+          damagePlayer(3, a.pos[0] - a.vel[0], a.pos[2] - a.vel[2], 4);
+          scene.remove(a.mesh); arrows.splice(arrows.indexOf(a), 1); a.stuck = true; a.gone = true;
+        }
+      }
+    }
+    if (a.gone) continue;
+    a.mesh.position.set(a.pos[0], a.pos[1], a.pos[2]);
+    if (!a.stuck) a.mesh.lookAt(a.pos[0] + a.vel[0], a.pos[1] + a.vel[1], a.pos[2] + a.vel[2]);
   }
 }
 
@@ -5186,6 +5317,9 @@ const RECIPES = [
   { shapeless: [[B.HAY]], out: [I.BREAD, 3] },
   { shape: ['WWW', 'PPP'], key: { W: ANY_WOOL, P: ANY_PLANKS }, out: [I.BED, 1] },
   { shape: ['###', '# #', '###'], key: { '#': ANY_PLANKS }, out: [B.CHEST, 1] },
+  { shape: ['##', '##'], key: { '#': [I.STRING] }, out: [B.WOOL_WHITE, 1] },
+  { shape: ['###', '###', '###'], key: { '#': [I.BONE] }, out: [B.BONE_BLOCK, 1] },
+  { shapeless: [[B.BONE_BLOCK]], out: [I.BONE, 9] },
   { shapeless: [[B.CHERRY_LOG]], out: [B.CHERRY_PLANKS, 4] },
   { shape: ['##', '##'], key: { '#': [B.QUARTZ] }, out: [B.QUARTZ_BRICKS, 4] },
   { shape: ['#', '#'], key: { '#': [B.QUARTZ] }, out: [B.QUARTZ_PILLAR, 2] },
@@ -6544,7 +6678,7 @@ preloadAround();
 spawnEndEntities();
 setGameMode(gameMode);
 // Zugriff für Tests/Entwicklung: index.html?debug
-if (new URLSearchParams(location.search).has('debug')) window.blockwelt = { mobs, Mob, player, get world() { return world; }, overworld, nether, end, endState, travelEnd, placeFire, fires, crystals, pearls, travel, fireballs, shootFireball, damagePlayer, inventory, addItem, drops, Drop, I, B, ITEMS, openInventory, closeInventory, primeTNT, meshChunk, BLOCK_ORDER, setGameMode, armor, armorStats, breakTime, canHarvest, get gameMode() { return gameMode; }, furnaces, RECIPES, craftGrid, matchRecipe, get target() { return target; }, chests, chestAt, get openChest() { return openChest; }, get dayTime() { return dayTime; }, set dayTime(v) { dayTime = v; }, useBed, placeBed, bedSpawn, get sleeping() { return sleeping; }, nearestVillage, sfx, get tradeMob() { return tradeMob; }, VILLAGER_PROFS };
+if (new URLSearchParams(location.search).has('debug')) window.blockwelt = { mobs, Mob, player, get world() { return world; }, overworld, nether, end, endState, travelEnd, placeFire, fires, crystals, pearls, travel, fireballs, shootFireball, damagePlayer, inventory, addItem, drops, Drop, I, B, ITEMS, openInventory, closeInventory, primeTNT, meshChunk, BLOCK_ORDER, setGameMode, armor, armorStats, breakTime, canHarvest, get gameMode() { return gameMode; }, furnaces, RECIPES, craftGrid, matchRecipe, get target() { return target; }, arrows, chests, chestAt, get openChest() { return openChest; }, get dayTime() { return dayTime; }, set dayTime(v) { dayTime = v; }, useBed, placeBed, bedSpawn, get sleeping() { return sleeping; }, nearestVillage, sfx, get tradeMob() { return tradeMob; }, VILLAGER_PROFS };
 player.fallPeak = player.pos[1];
 renderHealth();
 camera.position.set(player.pos[0], player.pos[1] + EYE, player.pos[2]);
@@ -6566,6 +6700,7 @@ renderer.setAnimationLoop(() => {
     updateDrops(dt);
     updateTNT(dt);
     updateFireballs(dt);
+    updateArrows(dt);
     updateFire(dt);
     updatePearls(dt);
     updatePlayerEffects(dt);
