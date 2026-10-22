@@ -56,7 +56,7 @@ Helm, Brustpanzer, Beinschutz und Stiefel aus **Leder, Ketten, Eisen, Gold, Diam
 
 In der Oberwelt gibt es **Dörfer** mit Brunnen, Kieswegen, Laternen, Häusern (Werkbank, Ofen, Strohballen drin), Bibliotheken mit Bücherregalen und Feldern mit Kürbissen und Melonen. Neue Welten starten direkt im nächsten Dorf.
 
-Die **Dorfbewohner** laufen im Dorf herum und bleiben stehen, wenn du näher kommst. **Rechtsklick** (Touch: 🧱) auf einen Dorfbewohner öffnet den **Handel**: Du bezahlst mit **Smaragden** (aus Smaragderz in den Bergen) oder verkaufst Dinge, um Smaragde zu bekommen. Je nach Beruf gibt es andere Angebote:
+Die **Dorfbewohner** sehen aus wie im echten Minecraft: große Nase, durchgehende Augenbraue, lange Robe und verschränkte Arme. Jeder Beruf hat eigene Kleidung (Bauer mit Strohhut, Bibliothekar mit Brille und Mütze, Schmied mit Augenklappe und Lederschürze, Geistlicher in Lila mit Goldborte, Metzger mit Stirnband und Schürze). Sie schauen dir hinterher, nicken beim Handeln und schütteln den Kopf, wenn dir etwas fehlt. Es gibt auch **Dorfkinder** (klein, großer Kopf), die nicht handeln. Die Dorfbewohner laufen im Dorf herum und bleiben stehen, wenn du näher kommst. **Rechtsklick** (Touch: 🧱) auf einen Dorfbewohner öffnet den **Handel**: Du bezahlst mit **Smaragden** (aus Smaragderz in den Bergen) oder verkaufst Dinge, um Smaragde zu bekommen. Je nach Beruf gibt es andere Angebote:
 
 | Beruf | Kleidung | Kauft | Verkauft |
 |---|---|---|---|
@@ -67,6 +67,10 @@ Die **Dorfbewohner** laufen im Dorf herum und bleiben stehen, wenn du näher kom
 | Metzger | hell, Schürze | rohes Fleisch, Kohle | gebratenes Fleisch, Steak |
 
 Neu ist auch **Brot** (1 Strohballen = 3 Brot in der Werkbank).
+
+### Truhen
+
+**Truhe** herstellen: 8 Holzbretter im Ring (Mitte frei) in der Werkbank. Aufstellen wie einen Block – der Verschluss zeigt zu dir. **Rechtsklick** öffnet sie: 27 Plätze zum Einlagern. **Shift-Klick** verschiebt einen ganzen Stapel zwischen Truhe und Inventar. Wird eine Truhe abgebaut, fällt ihr Inhalt heraus. In großen Dorfhäusern stehen Truhen mit Beute (Brot, Äpfel, Smaragde, Eisen, Kohle und mit Glück Gold, Diamanten oder ein Goldener Apfel).
 
 ### Betten & Schlafen
 
