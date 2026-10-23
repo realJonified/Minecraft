@@ -68,6 +68,40 @@ Die **Dorfbewohner** sehen aus wie im echten Minecraft: große Nase, durchgehend
 
 Neu ist auch **Brot** (1 Strohballen = 3 Brot in der Werkbank).
 
+### Biome
+
+Die Oberwelt hat jetzt **Biome wie im echten Minecraft** (über Temperatur und Feuchtigkeit verteilt):
+
+| Biom | Besonderheiten |
+|---|---|
+| 🏜️ **Wüste** | Sand und Sandstein, Kakteen, tote Büsche, Dörfer aus Sandstein |
+| 🟧 **Tafelberge (Badlands)** | roter Sand, bunte Keramik-Schichten in den Hängen, tote Büsche |
+| 🌴 **Dschungel** | dichter Dschungel mit hohen Tropenbäumen |
+| 🦒 **Savanne** | Akazien, viel hohes Gras, Dörfer aus Akazienholz |
+| 🐸 **Sumpf** | Eichen, flache Tümpel, Schlamm am Ufer, blaue Orchideen |
+| 🌾 **Ebene** | weite Wiesen mit Gras und Blumen, wenige Bäume |
+| 🌳 **Wald** | Eichen und Birken, dunkle Schwarzeichen-Flecken, Kirschhaine |
+| 🌸 **Blumenwald** | jede Menge Mohn, Löwenzahn und Kornblumen |
+| 🌲 **Taiga** | Fichten und Podsol, Dörfer aus Fichtenholz |
+| ❄️ **Verschneite Ebene** | Schnee, vereinzelte Fichten, **zugefrorene Seen** |
+
+Die Geländeform bleibt gleich wie vorher – alte Welten behalten ihre Berge und Bauwerke, nur Oberfläche und Pflanzen richten sich jetzt nach dem Biom.
+
+### Ackerbau
+
+- **Hacke** + Rechtsklick auf Gras oder Erde → **Ackerboden**.
+- **Weizenkörner** (findet man beim Abbauen von hohem Gras), **Karotten** oder **Kartoffeln** mit Rechtsklick auf den Ackerboden pflanzen.
+- Die Pflanzen **wachsen von selbst** in 3 Stufen (reif nach ein paar Minuten). **Knochenmehl** (1 Knochen = 3 Knochenmehl) lässt sie sofort wachsen.
+- Reif ernten: Weizen + Körner, mehrere Karotten bzw. Kartoffeln. Unreif gibt es nur das Saatgut zurück.
+- **3 Weizen = Brot**, 9 Weizen = Strohballen (und zurück), Kartoffel im Ofen → **Ofenkartoffel**.
+- Die Felder in den Dörfern tragen jetzt Weizen, Karotten und Kartoffeln. Der Bauer kauft Weizen, Karotten und Kartoffeln und verkauft Körner und Brot.
+
+### Bogen & Pfeile
+
+- **Bogen**: 3 Stöcke + 3 Fäden in der Werkbank. **Pfeile**: Feuerstein + Stock + Feder = 4 Pfeile. Skelette droppen auch Pfeile, der Schmied verkauft beides.
+- **Rechte Maustaste gedrückt halten** (Touch: 🧱 halten) spannt den Bogen – je länger, desto weiter und stärker (bis 4½ Herzen Schaden), beim Loslassen fliegt der Pfeil. Dabei wird leicht herangezoomt.
+- Pfeile treffen Monster, Tiere und den Enderdrachen und **zerstören Endkristalle** aus der Ferne. Steckende Pfeile kann man wieder aufsammeln.
+
 ### Monster, Sonne & Nacht
 
 Nachts erscheinen **Zombies**, **Skelette**, **Spinnen**, **Creeper** und selten **Endermen**.
@@ -143,7 +177,7 @@ Alle Geräusche werden live im Browser erzeugt (keine Audiodateien): Abbauen, Se
 
 ## Einstellungen
 
-- **🔭 Sichtweite**: im Menü per Regler von 2 bis **64 Chunks** (1 Chunk = 16×16 Blöcke). Bis 12 Chunks (Handy/Tablet: 8) wird die echte Welt geladen, dahinter zeigt eine vereinfachte **Fernsicht** die Landschaft bis zum Horizont (Berge, Seen, Strände, Schnee) – so wie die Mod „Distant Horizons“. So bleibt das Spiel auch bei 64 Chunks flüssig.
+- **🔭 Sichtweite**: im Menü per Regler von 2 bis **1024 Chunks** (1 Chunk = 16×16 Blöcke, also bis 16 384 Blöcke weit). Bis 12 Chunks (Handy/Tablet: 8) wird die echte Welt geladen, dahinter zeigt eine vereinfachte **Fernsicht** die Landschaft bis zum Horizont (Berge, Seen, Strände, Schnee, Wüsten, Tafelberge) – so wie die Mod „Distant Horizons“. Je weiter weg, desto gröber die Kacheln (4, 16, 64 und 256 Blöcke), so bleibt das Spiel auch bei 1024 Chunks flüssig.
 - **Texturstufen nach Entfernung**: nahe Blöcke mit 128×128 Pixeln, ab 4 Chunks 64×64, ab 12 Chunks 32×32 und ab 24 Chunks 16×16.
 - **🔊 Sound** und **🎵 Musik** getrennt an/aus.
 
