@@ -121,6 +121,8 @@
   .panel button { display: block; width: 100%; margin: 8px 0; padding: 12px; font-size: 18px; color: #fff; background: #6b6b6b; border: 3px solid #222; box-shadow: inset 2px 2px 0 #999, inset -2px -2px 0 #444; cursor: pointer; font-family: inherit; }
   .panel button:hover { background: #7c8fc0; }
   .panel .row2 { display: flex; gap: 8px; }
+  .panel .setting { margin: 10px 0 6px; text-align: left; font-size: 15px; }
+  .panel .setting input { width: 100%; accent-color: #7c8fc0; }
   #sleep { position: fixed; inset: 0; background: #05060c; opacity: 0; pointer-events: none; transition: opacity .2s; }
   .panel .row2 button { font-size: 16px; }
   .controls { margin-top: 18px; text-align: left; font-size: 14px; display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; color: #ccc; }
@@ -185,6 +187,7 @@
     <button id="play">Spielen</button>
     <button id="peaceful">Monster: An</button>
     <div class="row2"><button id="sound">🔊 Sound: An</button><button id="music">🎵 Musik: An</button></div>
+    <div class="setting"><label for="dist">🔭 Sichtweite: <b id="dist-val"></b></label><input id="dist" type="range" min="2" max="64" step="1"></div>
     <button id="mode">Spielmodus: 🗡️ Überleben</button>
     <button id="newworld">Neue Welt erstellen</button>
     <div id="newworld-choice" style="display:none">
@@ -296,7 +299,13 @@ const WATER_LEVEL = 30;
 const NETHER_LAVA = 31;          // Lavasee-Höhe im Nether
 // Handy/Tablet erkennen (mit ?touch in der URL erzwingbar)
 const IS_TOUCH = matchMedia('(pointer: coarse)').matches || new URLSearchParams(location.search).has('touch');
-const RENDER_DIST = IS_TOUCH ? 4 : 6;   // in Chunks
+// Sichtweite (in Chunks, einstellbar bis 64). Bis FULL_MAX echte Chunks, dahinter vereinfachte Fernsicht
+const SETTINGS_KEY = 'blockwelt-settings';
+let settings = {};
+try { settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'); } catch { /* egal */ }
+const FULL_MAX = IS_TOUCH ? 8 : 12;
+let renderDist = Math.max(2, Math.min(64, settings.dist || (IS_TOUCH ? 4 : 6)));
+let fullDist = Math.min(renderDist, FULL_MAX);
 const DAY_LENGTH = 600;         // Sekunden pro Tag
 const REACH = 6;
 const SAVE_KEY = 'blockwelt-save-v1';
@@ -334,7 +343,7 @@ const TILE_NAMES = [
   'quartz_bricks', 'quartz_pillar_top', 'quartz_pillar_side', 'chiseled_sandstone', 'purpur_pillar_top', 'purpur_pillar_side', 'packed_ice', 'blue_ice',
   'honeycomb', 'slime', 'oxidized_copper', 'cut_copper', 'coal_block', 'raw_iron_block', 'raw_gold_block', 'deepslate_tiles', 'redstone_lamp',
   'froglight_top', 'froglight_side', 'red_mushroom_block', 'bed_head_top', 'bed_foot_top', 'bed_side_head', 'bed_side_foot', 'bed_end',
-  'chest_top', 'chest_side', 'chest_front',
+  'chest_top', 'chest_side', 'chest_front', 'iron_bars',
 ];
 const T = Object.fromEntries(TILE_NAMES.map((n, i) => [n, i]));
 const TILE_PX = 128;                      // Auflösung einer Blocktextur (128×128 Pixel)
@@ -526,6 +535,8 @@ add('REDSTONE_LAMP', 'Redstone-Lampe', ['redstone_lamp'], { glow: true });
 add('OCHRE_FROGLIGHT', 'Ockerfarbenes Froschlicht', ['froglight_top', 'froglight_side', 'froglight_top'], { glow: true });
 add('RED_MUSHROOM_BLOCK', 'Roter Pilzblock', ['red_mushroom_block']);
 add('CHEST', 'Truhe', ['chest_top', 'chest_side', 'chest_top', 'chest_front'], { opaque: false });
+add('IRON_BARS', 'Eisengitter', ['iron_bars'], { opaque: false });
+OCCLUDES[B.IRON_BARS] = 0;
 const isBed = (id) => id === B.BED_FOOT || id === B.BED_HEAD;
 OCCLUDES[B.BED_FOOT] = OCCLUDES[B.BED_HEAD] = 0;
 // Höhe niedriger Blöcke (Kollision): Betten sind 9/16 hoch
@@ -653,7 +664,7 @@ const CREATIVE_TABS = {
 CREATIVE_TABS.bauen[2].push(B.CHERRY_PLANKS, B.MANGROVE_PLANKS, B.BAMBOO_PLANKS, B.CRIMSON_PLANKS, B.WARPED_PLANKS, B.SMOOTH_SANDSTONE, B.CHISELED_SANDSTONE,
   B.QUARTZ_BRICKS, B.QUARTZ_PILLAR, B.PURPUR_PILLAR, B.RED_NETHER_BRICKS, B.DEEPSLATE_TILES, B.CUT_COPPER, B.OXIDIZED_COPPER, B.COAL_BLOCK, B.RAW_IRON_BLOCK, B.RAW_GOLD_BLOCK);
 CREATIVE_TABS.natur[2].push(B.CHERRY_LOG, B.CHERRY_LEAVES, B.PACKED_ICE, B.BLUE_ICE, B.CRIMSON_NYLIUM, B.WARPED_NYLIUM, B.NETHER_WART_BLOCK, B.WARPED_WART_BLOCK, B.RED_MUSHROOM_BLOCK);
-CREATIVE_TABS.deko[2].push(B.CHEST, B.REDSTONE_LAMP, B.OCHRE_FROGLIGHT, B.HONEYCOMB_BLOCK, B.SLIME_BLOCK);
+CREATIVE_TABS.deko[2].push(B.CHEST, B.IRON_BARS, B.REDSTONE_LAMP, B.OCHRE_FROGLIGHT, B.HONEYCOMB_BLOCK, B.SLIME_BLOCK);
 const BLOCK_ORDER = ['bauen', 'natur', 'farben', 'deko'].flatMap(k => CREATIVE_TABS[k][2]);
 const PALETTE_ALL = [...BLOCK_ORDER, ...ITEM_ORDER];
 
@@ -1415,6 +1426,11 @@ function makeAtlas() {
     tile('bed_side_foot', side(blanket));
     tile('bed_end', side(blanket));
   }
+  tile('iron_bars', (x, y) => {
+    const bar = x % 8 === 3 || x % 8 === 4, rail = y === 1 || y === 2 || y === E - 2 || y === E - 1 || y === 15 || y === 16;
+    if (!bar && !rail) return CLEAR;
+    return (bar && x % 8 === 3) || (rail && (y === 1 || y === 15 || y === E - 2)) ? '#d8d8d8' : '#6a6a6a';
+  });
   // Truhe: Holz mit dunklem Rahmen, Deckelfuge und Metallverschluss (sichtbar sind die Zeilen 4–31)
   {
     const wood = planks(['#9a6a2a', '#a6742e', '#b07e34', '#ba883a'], '#6a4818');
@@ -2220,12 +2236,12 @@ class World {
   // End: schwebende Endstein-Insel über dem Nichts, Obsidian-Säulen und der Brunnen in der Mitte
   endColumn(wx, wz) {
     const n = this.noise, r = Math.hypot(wx, wz);
-    const edge = 60 + n.noise2(wx / 30, wz / 30) * 10;
+    const edge = 92 + n.noise2(wx / 30, wz / 30) * 10;   // große Hauptinsel
     if (r < edge) {
       const t = 1 - r / edge;
       return { top: 50 + Math.floor(t * 4 + n.noise2(wx / 20, wz / 20) * 1.5), bottom: Math.floor(50 - t * t * 34 - 2) };
     }
-    if (r > 110) {
+    if (r > 140) {
       // kleinere Außeninseln
       const v = n.noise2(wx / 50 + 300, wz / 50 - 200);
       if (v > 0.45) { const t = (v - 0.45) / 0.55; return { top: 48 + Math.floor(t * 6), bottom: Math.floor(48 - t * 14) }; }
@@ -2234,10 +2250,12 @@ class World {
   }
   setupEnd() {
     const rnd = mulberry32(this.seed);
+    // 10 Obsidiansäulen im Kreis (Radius 43) wie im echten End; die zwei niedrigsten haben einen Eisengitter-Käfig
     this.pillars = Array.from({ length: 10 }, (_, i) => {
       const a = i / 10 * Math.PI * 2;
-      return { x: Math.round(Math.cos(a) * 38), z: Math.round(Math.sin(a) * 38), r: 2 + Math.floor(rnd() * 3), top: 68 + Math.floor(rnd() * 20) };
+      return { x: Math.round(Math.cos(a) * 43), z: Math.round(Math.sin(a) * 43), r: 3 + Math.floor(rnd() * 3), top: 66 + Math.floor(rnd() * 22) };
     });
+    [...this.pillars].sort((a, b) => a.top - b.top).slice(0, 2).forEach(pl => { pl.cage = true; });
     this.fountainY = this.endColumn(0, 0).top;
   }
   generateEnd(chunk) {
@@ -2259,6 +2277,11 @@ class World {
       }
       const lx = pl.x - ox, lz = pl.z - oz;
       if (lx >= 0 && lx < 16 && lz >= 0 && lz < 16) d[idx(lx, pl.top + 1, lz)] = B.BEDROCK;
+      if (pl.cage) for (let dz = -2; dz <= 2; dz++) for (let dx = -2; dx <= 2; dx++) for (let dy = 1; dy <= 5; dy++) {
+        const cx = lx + dx, cz = lz + dz;
+        if (cx < 0 || cx > 15 || cz < 0 || cz > 15) continue;
+        if (Math.abs(dx) === 2 || Math.abs(dz) === 2 || dy === 5) d[idx(cx, pl.top + dy, cz)] = B.IRON_BARS;
+      }
     }
     // Brunnen aus Grundgestein (wird nach dem Sieg über den Drachen zum Ausgangsportal)
     for (let z = 0; z < CHUNK; z++) for (let x = 0; x < CHUNK; x++) {
@@ -2490,7 +2513,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 document.getElementById('game').appendChild(renderer.domElement);
 
 const scene = new THREE.Scene();
-const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.05, 1000);
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.05, Math.max(1000, renderDist * 16 + 300));
 camera.rotation.order = 'YXZ';
 
 const SKY_DAY = new THREE.Color(0x87c5f5);
@@ -2499,7 +2522,7 @@ const SKY_SUNSET = new THREE.Color(0xf09060);
 const WATER_FOG = new THREE.Color(0x1d3f8a);
 const skyColor = new THREE.Color();
 scene.background = skyColor;
-const fogFar = RENDER_DIST * CHUNK;
+let fogFar = renderDist * CHUNK;
 scene.fog = new THREE.Fog(skyColor, fogFar * 0.55, fogFar * 0.95);
 
 atlasCanvas = makeAtlas();
@@ -2514,6 +2537,24 @@ const solidMat = new THREE.MeshBasicMaterial({ map: atlas, vertexColors: true, a
 const waterMat = new THREE.MeshBasicMaterial({ map: atlas, vertexColors: true, transparent: true, opacity: 0.72, depthWrite: false, side: THREE.DoubleSide });
 // Leuchtende Blöcke werden nachts nicht abgedunkelt
 const glowMat = new THREE.MeshBasicMaterial({ map: atlas, vertexColors: true, alphaTest: 0.5 });
+// Texturstufen nach Entfernung: 128 (nah), 64 ab 4 Chunks, 32 ab 12 Chunks, 16 ab 24 Chunks
+function scaledAtlas(px) {
+  const c = document.createElement('canvas');
+  c.width = px * ATLAS_COLS; c.height = px * ATLAS_ROWS;
+  const ctx = c.getContext('2d');
+  ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+  ctx.drawImage(atlasCanvas, 0, 0, c.width, c.height);
+  const t = new THREE.CanvasTexture(c);
+  t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestMipmapLinearFilter; t.generateMipmaps = true;
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+const TEX_LEVELS = [atlas, scaledAtlas(64), scaledAtlas(32), scaledAtlas(16)];
+const MATS = TEX_LEVELS.map((tex, i) => i === 0 ? { solid: solidMat, water: waterMat, glow: glowMat } : {
+  solid: Object.assign(solidMat.clone(), { map: tex }), water: Object.assign(waterMat.clone(), { map: tex }), glow: Object.assign(glowMat.clone(), { map: tex }),
+});
+const texLevel = (d) => d >= 24 ? 3 : d >= 12 ? 2 : d >= 4 ? 1 : 0;   // d = Abstand in Chunks
+const lodMat = new THREE.MeshBasicMaterial({ map: TEX_LEVELS[3], vertexColors: true });
 
 // Netherportal mit eigener, wirbelnder Textur
 const portalCanvas = document.createElement('canvas');
@@ -2738,20 +2779,111 @@ function meshChunk(cx, cz) {
   const c = world.getChunk(cx, cz);
   disposeChunkMeshes(c);
   const g = buildChunkGeometry(world, cx, cz);
-  const waterMesh = makeMesh(g.water, waterMat, cx, cz), portalMesh = makeMesh(g.portal, portalMat, cx, cz);
+  const lvl = c.lod = chunkTexLevel(cx, cz), M = MATS[lvl];
+  const tag = (m, kind) => { if (m) m.userData.kind = kind; return m; };
+  const waterMesh = tag(makeMesh(g.water, M.water, cx, cz), 'water'), portalMesh = makeMesh(g.portal, portalMat, cx, cz);
   if (waterMesh) waterMesh.renderOrder = 1;
   if (portalMesh) portalMesh.renderOrder = 2;
-  c.meshes = [makeMesh(g.solid, solidMat, cx, cz), waterMesh, makeMesh(g.glow, glowMat, cx, cz), portalMesh,
+  c.meshes = [tag(makeMesh(g.solid, M.solid, cx, cz), 'solid'), waterMesh, tag(makeMesh(g.glow, M.glow, cx, cz), 'glow'), portalMesh,
               makeMesh(g.endp, endPortalMat, cx, cz), makeMesh(g.fire, fireMat, cx, cz)].filter(Boolean);
   c.meshed = true;
 }
 
-// Chunk-Offsets nach Entfernung sortiert
-const CHUNK_ORDER = [];
-for (let dz = -RENDER_DIST; dz <= RENDER_DIST; dz++) for (let dx = -RENDER_DIST; dx <= RENDER_DIST; dx++) {
-  if (dx * dx + dz * dz <= RENDER_DIST * RENDER_DIST) CHUNK_ORDER.push([dx, dz]);
+function chunkTexLevel(cx, cz) {
+  return texLevel(Math.hypot(cx - Math.floor(player.pos[0] / CHUNK), cz - Math.floor(player.pos[2] / CHUNK)));
 }
-CHUNK_ORDER.sort((a, b) => (a[0] ** 2 + a[1] ** 2) - (b[0] ** 2 + b[1] ** 2));
+// Chunk-Offsets nach Entfernung sortiert
+let CHUNK_ORDER = [];
+function buildChunkOrder() {
+  CHUNK_ORDER = [];
+  for (let dz = -fullDist; dz <= fullDist; dz++) for (let dx = -fullDist; dx <= fullDist; dx++) {
+    if (dx * dx + dz * dz <= fullDist * fullDist) CHUNK_ORDER.push([dx, dz]);
+  }
+  CHUNK_ORDER.sort((a, b) => (a[0] ** 2 + a[1] ** 2) - (b[0] ** 2 + b[1] ** 2));
+}
+buildChunkOrder();
+// Sichtweite ändern (Einstellungen)
+function applyRenderDist(d) {
+  renderDist = Math.max(2, Math.min(64, d));
+  fullDist = Math.min(renderDist, FULL_MAX);
+  buildChunkOrder();
+  fogFar = renderDist * CHUNK;
+  camera.far = Math.max(1000, renderDist * CHUNK + 300);
+  camera.updateProjectionMatrix();
+  clearLod();
+  settings.dist = renderDist;
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch { /* egal */ }
+}
+
+// ---------- Fernsicht: vereinfachte Landschaft hinter den echten Chunks (nur Oberwelt) ----------
+const LOD_REGION = 4;   // Chunks pro Regionsseite (64×64 Blöcke)
+const lodRegions = new Map();   // "rx,rz" -> { mesh, step, pcx, pcz }
+let lodQueue = [], lodScan = 0;
+const lodStep = (d) => d < 28 ? 4 : d < 44 ? 8 : 16;
+function clearLod() {
+  for (const r of lodRegions.values()) if (r.mesh) { scene.remove(r.mesh); r.mesh.geometry.dispose(); }
+  lodRegions.clear();
+  lodQueue = [];
+}
+function buildLodRegion(rx, rz, step, pcx, pcz) {
+  const w = overworld, x0 = rx * 64, z0 = rz * 64, n = 64 / step, N = n + 2;
+  const H = new Int16Array(N * N);
+  for (let j = -1; j <= n; j++) for (let i = -1; i <= n; i++) H[(j + 1) * N + i + 1] = w.heightAt(x0 + i * step + (step >> 1), z0 + j * step + (step >> 1));
+  const surf = (h) => (h < WATER_LEVEL ? WATER_LEVEL : h) + 0.85;   // knapp unter der echten Oberfläche
+  const buf = { pos: [], uv: [], col: [], idx: [] };
+  const keep = fullDist - 2;   // hier liegen echte Chunks
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+    const wx = x0 + i * step, wz = z0 + j * step;
+    if (((wx >> 4) - pcx) ** 2 + ((wz >> 4) - pcz) ** 2 <= keep * keep) continue;
+    const h = H[(j + 1) * N + i + 1], top = surf(h);
+    const water = h < WATER_LEVEL, beach = h <= WATER_LEVEL + 1, snowy = h >= 63;
+    const tTop = water ? T.water : beach ? T.sand : snowy ? T.snow : T.grass_top;
+    const tSide = water ? T.water : beach ? T.sand : snowy ? T.snow_side : T.grass_side;
+    for (const f of [3, 0, 1, 4, 5]) {
+      let bottom = top;
+      if (f !== 3) {
+        const [nx, , nz] = FACES[f].n;
+        bottom = surf(H[(j + 1 + nz) * N + i + 1 + nx]);
+        if (bottom >= top) continue;
+      }
+      const base = buf.pos.length / 3, l = LIGHT[f][3];
+      for (const c of FACES[f].c) {
+        buf.pos.push(wx + c[0] * step, c[1] ? top : bottom, wz + c[2] * step);
+        const [u, v] = tileUV(f === 3 ? tTop : tSide, c[3], c[4]);
+        buf.uv.push(u, v);
+        buf.col.push(l, l, l);
+      }
+      buf.idx.push(base, base + 1, base + 2, base + 2, base + 1, base + 3);
+    }
+  }
+  return makeMesh(buf, lodMat);
+}
+function updateLod(dt) {
+  if (world !== overworld || renderDist <= fullDist) { if (lodRegions.size) clearLod(); return; }
+  const pcx = Math.floor(player.pos[0] / CHUNK), pcz = Math.floor(player.pos[2] / CHUNK);
+  lodScan -= dt;
+  if (lodScan <= 0) {
+    lodScan = 0.5;
+    lodQueue = [];
+    const R = Math.ceil(renderDist / LOD_REGION) + 1, prx = Math.floor(pcx / LOD_REGION), prz = Math.floor(pcz / LOD_REGION);
+    const wanted = new Set();
+    for (let rz = prz - R; rz <= prz + R; rz++) for (let rx = prx - R; rx <= prx + R; rx++) {
+      const d = Math.hypot(rx * LOD_REGION + 2 - pcx, rz * LOD_REGION + 2 - pcz);
+      if (d - 2.9 > renderDist || d + 2.9 <= fullDist - 2) continue;
+      const key = rx + ',' + rz, reg = lodRegions.get(key), step = lodStep(d);
+      wanted.add(key);
+      if (!reg || reg.step !== step || (d - 2.9 < fullDist + 3 && (reg.pcx !== pcx || reg.pcz !== pcz))) lodQueue.push([d, rx, rz, step]);
+    }
+    for (const [key, r] of lodRegions) if (!wanted.has(key)) { if (r.mesh) { scene.remove(r.mesh); r.mesh.geometry.dispose(); } lodRegions.delete(key); }
+    lodQueue.sort((a, b) => a[0] - b[0]);
+  }
+  for (let k = 0; k < 2 && lodQueue.length; k++) {
+    const [, rx, rz, step] = lodQueue.shift(), key = rx + ',' + rz;
+    const old = lodRegions.get(key);
+    if (old?.mesh) { scene.remove(old.mesh); old.mesh.geometry.dispose(); }
+    lodRegions.set(key, { mesh: buildLodRegion(rx, rz, step, pcx, pcz), step, pcx, pcz });
+  }
+}
 
 let unloadTimer = 0;
 function updateChunks(dt, budget = 2) {
@@ -2767,14 +2899,18 @@ function updateChunks(dt, budget = 2) {
   unloadTimer += dt;
   if (unloadTimer > 1) {
     unloadTimer = 0;
-    const limit = RENDER_DIST + 2;
+    const limit = fullDist + 2;
     for (const [key, c] of world.chunks) {
       if (Math.abs(c.cx - pcx) > limit || Math.abs(c.cz - pcz) > limit) {
         disposeChunkMeshes(c);
         world.chunks.delete(key);
-      } else if (c.meshed && (c.cx - pcx) ** 2 + (c.cz - pcz) ** 2 > (RENDER_DIST + 1) ** 2) {
+      } else if (c.meshed && (c.cx - pcx) ** 2 + (c.cz - pcz) ** 2 > (fullDist + 1) ** 2) {
         disposeChunkMeshes(c);
         c.meshed = false;
+      } else if (c.meshed) {
+        // Texturstufe an die Entfernung anpassen
+        const lvl = chunkTexLevel(c.cx, c.cz);
+        if (lvl !== c.lod) { c.lod = lvl; for (const m of c.meshes) if (m.userData.kind) m.material = MATS[lvl][m.userData.kind]; }
       }
     }
   }
@@ -3448,6 +3584,11 @@ class Mob {
 
   hurt(amount, fromX, fromZ, knock = 7, byPlayer = false) {
     if (!this.alive || this.hurtTimer > 0) return false;
+    if (this.def.boss && crystals.length > 0) {
+      // solange Endkristalle stehen, ist der Drache kaum zu verletzen
+      amount *= 0.25;
+      if (byPlayer && !this.crystalHint) { this.crystalHint = true; showName('Zerstöre zuerst die Endkristalle auf den Säulen!'); }
+    }
     this.hp -= amount;
     this.hurtTimer = 0.35;
     sfx.mob(this.type, this.hp <= 0 ? 'death' : 'hurt', this.pos);
@@ -3577,10 +3718,11 @@ class Mob {
     this.wings.forEach((w, i) => { w.rotation.z = flap * (i ? -1 : 1); });
     this.tail.forEach((seg, i) => { seg.rotation.y = Math.sin(t * 2 - i * 0.6) * 0.15; });
     // Kristalle heilen den Drachen
-    const c = nearestCrystal(p, 48);
+    const c = nearestCrystal(p, 64);
+    this.healer = c;
     if (c) {
       st.heal += dt;
-      if (st.heal > 0.5) { st.heal = 0; this.hp = Math.min(this.def.hp, this.hp + 1); }
+      if (st.heal > 0.25) { st.heal = 0; this.hp = Math.min(this.def.hp, this.hp + 1); }   // 4 Lebenspunkte pro Sekunde
       setBeam(c.pos, [p[0], p[1] + 2.5, p[2]]);
     } else setBeam(null);
     this.root.position.set(p[0], p[1], p[2]);
@@ -4593,6 +4735,9 @@ function nearestCrystal(p, range) {
   return best;
 }
 function destroyCrystal(c) {
+  // wird der Kristall zerstört, der den Drachen gerade heilt, nimmt der Drache Schaden
+  const dragon = mobs.find(m => m.def.boss && m.alive);
+  if (dragon && dragon.healer === c) { dragon.hurtTimer = 0; dragon.hp -= 10; dragon.hurtTimer = 0.35; if (dragon.hp <= 0) dragon.deadTime = 0; }
   scene.remove(c.group);
   crystals.splice(crystals.indexOf(c), 1);
   if (!endState.crystals.includes(c.id)) endState.crystals.push(c.id);
@@ -4899,6 +5044,7 @@ function applyDimensionLook() {
 // Alles aus der aktuellen Welt wegräumen und in die andere wechseln
 function switchWorld(target) {
   sfx.portal();
+  clearLod();
   for (const c of world.chunks.values()) disposeChunkMeshes(c);
   world.chunks.clear();
   for (const m of mobs) m.remove();
@@ -5225,14 +5371,14 @@ for (const id of [B.LEAVES, B.BIRCH_LEAVES, B.SPRUCE_LEAVES, B.JUNGLE_LEAVES, B.
 TOOL_FOR[B.ANCIENT_DEBRIS] = TOOL_FOR[B.NETHERITE_BLOCK] = 'pickaxe';
 HARDNESS[B.ANCIENT_DEBRIS] = 30;
 Object.assign(HARDNESS, {
-  [B.BED_FOOT]: 0.2, [B.BED_HEAD]: 0.2, [B.CHEST]: 2.5, [B.CHERRY_LOG]: 2, [B.CHERRY_PLANKS]: 2, [B.CHERRY_LEAVES]: 0.2, [B.MANGROVE_PLANKS]: 2, [B.BAMBOO_PLANKS]: 2,
+  [B.BED_FOOT]: 0.2, [B.BED_HEAD]: 0.2, [B.CHEST]: 2.5, [B.IRON_BARS]: 3, [B.CHERRY_LOG]: 2, [B.CHERRY_PLANKS]: 2, [B.CHERRY_LEAVES]: 0.2, [B.MANGROVE_PLANKS]: 2, [B.BAMBOO_PLANKS]: 2,
   [B.CRIMSON_PLANKS]: 2, [B.WARPED_PLANKS]: 2, [B.CRIMSON_NYLIUM]: 0.4, [B.WARPED_NYLIUM]: 0.4, [B.NETHER_WART_BLOCK]: 1, [B.WARPED_WART_BLOCK]: 1,
   [B.RED_NETHER_BRICKS]: 2, [B.QUARTZ_BRICKS]: 0.8, [B.QUARTZ_PILLAR]: 0.8, [B.SMOOTH_SANDSTONE]: 2, [B.CHISELED_SANDSTONE]: 0.8, [B.PURPUR_PILLAR]: 1.5,
   [B.PACKED_ICE]: 0.5, [B.BLUE_ICE]: 2.8, [B.HONEYCOMB_BLOCK]: 0.6, [B.SLIME_BLOCK]: 0, [B.OXIDIZED_COPPER]: 3, [B.CUT_COPPER]: 3, [B.COAL_BLOCK]: 5,
   [B.RAW_IRON_BLOCK]: 5, [B.RAW_GOLD_BLOCK]: 5, [B.DEEPSLATE_TILES]: 3.5, [B.REDSTONE_LAMP]: 0.3, [B.OCHRE_FROGLIGHT]: 0.3, [B.RED_MUSHROOM_BLOCK]: 0.2,
 });
 for (const id of [B.CHEST, B.BED_FOOT, B.BED_HEAD, B.CHERRY_LOG, B.CHERRY_PLANKS, B.MANGROVE_PLANKS, B.BAMBOO_PLANKS, B.CRIMSON_PLANKS, B.WARPED_PLANKS, B.RED_MUSHROOM_BLOCK]) TOOL_FOR[id] = 'axe';
-for (const id of [B.CRIMSON_NYLIUM, B.WARPED_NYLIUM, B.RED_NETHER_BRICKS, B.QUARTZ_BRICKS, B.QUARTZ_PILLAR, B.SMOOTH_SANDSTONE, B.CHISELED_SANDSTONE, B.PURPUR_PILLAR,
+for (const id of [B.IRON_BARS, B.CRIMSON_NYLIUM, B.WARPED_NYLIUM, B.RED_NETHER_BRICKS, B.QUARTZ_BRICKS, B.QUARTZ_PILLAR, B.SMOOTH_SANDSTONE, B.CHISELED_SANDSTONE, B.PURPUR_PILLAR,
                   B.PACKED_ICE, B.BLUE_ICE, B.OXIDIZED_COPPER, B.CUT_COPPER, B.COAL_BLOCK, B.RAW_IRON_BLOCK, B.RAW_GOLD_BLOCK, B.DEEPSLATE_TILES]) TOOL_FOR[id] = 'pickaxe';
 for (const id of [B.CHERRY_LEAVES, B.NETHER_WART_BLOCK, B.WARPED_WART_BLOCK]) TOOL_FOR[id] = 'hoe';
 HARDNESS[B.NETHERITE_BLOCK] = 50;
@@ -5317,6 +5463,7 @@ const RECIPES = [
   { shapeless: [[B.HAY]], out: [I.BREAD, 3] },
   { shape: ['WWW', 'PPP'], key: { W: ANY_WOOL, P: ANY_PLANKS }, out: [I.BED, 1] },
   { shape: ['###', '# #', '###'], key: { '#': ANY_PLANKS }, out: [B.CHEST, 1] },
+  { shape: ['###', '###'], key: { '#': [I.IRON_INGOT] }, out: [B.IRON_BARS, 16] },
   { shape: ['##', '##'], key: { '#': [I.STRING] }, out: [B.WOOL_WHITE, 1] },
   { shape: ['###', '###', '###'], key: { '#': [I.BONE] }, out: [B.BONE_BLOCK, 1] },
   { shapeless: [[B.BONE_BLOCK]], out: [I.BONE, 9] },
@@ -6345,6 +6492,14 @@ function updateSoundBtns() {
 soundBtn.addEventListener('click', () => { soundOn = !soundOn; sfx.setVolumes(); sfx.unlock(); sfx.click(); updateSoundBtns(); });
 musicBtn.addEventListener('click', () => { musicOn = !musicOn; sfx.setVolumes(); sfx.unlock(); updateSoundBtns(); });
 updateSoundBtns();
+// Sichtweite-Regler
+const distEl = document.getElementById('dist'), distVal = document.getElementById('dist-val');
+function showDist() {
+  distVal.textContent = renderDist + ' Chunks' + (renderDist > fullDist ? ` (echte Welt bis ${fullDist}, dahinter Fernsicht)` : '');
+}
+distEl.value = renderDist;
+showDist();
+distEl.addEventListener('input', () => { applyRenderDist(+distEl.value); showDist(); });
 // Browser erlauben Ton erst nach einer Eingabe
 for (const ev of ['pointerdown', 'keydown', 'touchstart']) window.addEventListener(ev, () => sfx.unlock(), { passive: true });
 document.getElementById('respawn').addEventListener('click', respawn);
@@ -6623,8 +6778,8 @@ function updateSky(dt) {
 
   const lin = Math.pow(brightness, 2.2);
   lightLin = lin;
-  solidMat.color.setScalar(lin);
-  waterMat.color.setScalar(lin);
+  for (const M of MATS) { M.solid.color.setScalar(lin); M.water.color.setScalar(lin); }
+  lodMat.color.setScalar(lin);
   cloudMat.color.setScalar(Math.max(0.15, brightness));
   stars.position.copy(camera.position);
   stars.material.opacity = inEnd ? 1 : inNether ? 0 : Math.max(0, Math.min(1, (0.6 - daylight) * 2));
@@ -6692,6 +6847,7 @@ renderer.setAnimationLoop(() => {
   const dt = Math.min(clock.getDelta(), 0.1);
 
   updateChunks(dt);
+  updateLod(dt);
   const running = isActive() && !player.dead && !invOpen;
   if (running && sleeping) { updateSleep(dt); camera.position.set(player.pos[0], player.pos[1] + 0.3, player.pos[2]); }
   else if (running) {

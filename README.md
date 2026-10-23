@@ -124,7 +124,7 @@ Alle Geräusche werden live im Browser erzeugt (keine Audiodateien): Abbauen, Se
 - **Der Nether**: Rahmen aus Obsidian bauen (mind. 4×5), mit dem Feuerzeug anzünden, 2 Sekunden reinstellen. Dort warten Netherrack-Höhlen, ein riesiger Lavasee, Seelensand, Magmablöcke, Leuchtstein-Trauben, Netherquarz- und Nethergolderz. Ein Block im Nether entspricht 8 Blöcken in der Oberwelt; auf der anderen Seite wird automatisch ein Portal gebaut
 - Nether-Mobs: Zombifizierte Piglins (friedlich, bis man einen schlägt – dann greift die ganze Gruppe an) und Ghasts, die Feuerbälle schießen. Feuerbälle kann man mit einem Schlag zurückschleudern!
 - **Feuer**: Das Feuerzeug zündet jetzt richtiges Feuer an. Es frisst Holz, Laub, Wolle und Strohballen, springt über und zündet TNT. Auf Netherrack brennt es ewig, Wasser löscht es. Ghast-Feuerbälle setzen den Boden in Brand
-- **Das End**: 12 Endportalrahmen als Ring (5×5 ohne Ecken) legen, in jeden ein Enderauge (Enderperle + Leuchtstein) setzen und ins Portal springen. Dort: schwebende Endstein-Insel über dem Nichts, Obsidian-Säulen mit Endkristallen und der **Enderdrache** mit Bossleiste. Kristalle zerstören (sie heilen den Drachen), Drachen besiegen – dann erscheinen Ausgangsportal und Drachenei
+- **Das End**: 12 Endportalrahmen als Ring (5×5 ohne Ecken) legen, in jeden ein Enderauge (Enderperle + Leuchtstein) setzen und ins Portal springen. Dort wartet eine **große Endinsel** über dem Nichts mit **10 Obsidiansäulen** im Kreis (wie im echten Minecraft, Radius 43). Auf jeder Säule schwebt ein **Endkristall**, die zwei niedrigsten sind mit **Eisengittern** geschützt. Die Kristalle **heilen den Enderdrachen** (Heilstrahl) – solange noch einer steht, kommt nur ein Viertel deines Schadens an. Wird der Kristall zerstört, der ihn gerade heilt, nimmt der Drache Schaden. In der Mitte steht ein **Brunnen aus Grundgestein**: Nach dem Sieg wird er zum **Ausgangsportal** in die Oberwelt, und obendrauf erscheint das **Drachenei** zum Einsammeln
 - **Endermen**: im End und selten nachts in der Oberwelt. Nicht in die Augen schauen! Sie teleportieren sich und droppen Enderperlen, die man werfen kann, um sich zu teleportieren
 - Lava (auch tief in den Höhlen der Oberwelt) setzt dich in Brand – Feuerresistenz vom Verzauberten Goldenen Apfel schützt
 - Neue Landschaft: Dschungel, Savannen mit Akazien, dunkle Wälder, Podsol in Nadelwäldern, grobe Erde, Tiefenschiefer ganz unten, Schwarzstein und Basalt im Nether
@@ -140,6 +140,12 @@ Alle Geräusche werden live im Browser erzeugt (keine Audiodateien): Abbauen, Se
 - Ambient Occlusion für den typischen weichen Schatten-Look
 - Alle Texturen werden prozedural im Code gezeichnet (keine Bilddateien)
 - Automatisches Speichern im Browser (localStorage): Welt-Änderungen, Position, Uhrzeit
+
+## Einstellungen
+
+- **🔭 Sichtweite**: im Menü per Regler von 2 bis **64 Chunks** (1 Chunk = 16×16 Blöcke). Bis 12 Chunks (Handy/Tablet: 8) wird die echte Welt geladen, dahinter zeigt eine vereinfachte **Fernsicht** die Landschaft bis zum Horizont (Berge, Seen, Strände, Schnee) – so wie die Mod „Distant Horizons“. So bleibt das Spiel auch bei 64 Chunks flüssig.
+- **Texturstufen nach Entfernung**: nahe Blöcke mit 128×128 Pixeln, ab 4 Chunks 64×64, ab 12 Chunks 32×32 und ab 24 Chunks 16×16.
+- **🔊 Sound** und **🎵 Musik** getrennt an/aus.
 
 ## Steuerung
 
