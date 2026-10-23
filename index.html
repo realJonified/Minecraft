@@ -305,7 +305,8 @@ let settings = {};
 try { settings = JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}'); } catch { /* egal */ }
 const FULL_MAX = IS_TOUCH ? 8 : 12;
 const MAX_DIST = 1024;
-let renderDist = Math.max(2, Math.min(MAX_DIST, settings.dist || (IS_TOUCH ? 4 : 6)));
+let shownDist = Math.max(2, Math.min(100000, settings.dist || (IS_TOUCH ? 4 : 6)));   // angezeigter Wert (Regler bis 100 000)
+let renderDist = Math.min(MAX_DIST, shownDist);                                            // tatsächlich gerendert (höchstens 1024)
 let fullDist = Math.min(renderDist, FULL_MAX);
 const DAY_LENGTH = 600;         // Sekunden pro Tag
 const REACH = 6;
@@ -2977,14 +2978,15 @@ function buildChunkOrder() {
 buildChunkOrder();
 // Sichtweite ändern (Einstellungen)
 function applyRenderDist(d) {
-  renderDist = Math.max(2, Math.min(MAX_DIST, d));
+  shownDist = Math.max(2, Math.min(100000, d));
+  renderDist = Math.min(MAX_DIST, shownDist);
   fullDist = Math.min(renderDist, FULL_MAX);
   buildChunkOrder();
   fogFar = renderDist * CHUNK;
   camera.far = Math.max(1000, renderDist * CHUNK + 300);
   camera.updateProjectionMatrix();
   clearLod();
-  settings.dist = renderDist;
+  settings.dist = shownDist;
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch { /* egal */ }
 }
 
@@ -6831,11 +6833,12 @@ updateCloudsBtn();
 // Sichtweite-Regler
 const distEl = document.getElementById('dist'), distVal = document.getElementById('dist-val');
 function showDist() {
-  distVal.textContent = renderDist + ' Chunks' + (renderDist > fullDist ? ` (echte Welt bis ${fullDist}, dahinter Fernsicht)` : '');
+  distVal.textContent = shownDist.toLocaleString('de-DE') + ' Chunks' + (renderDist > fullDist ? ` (echte Welt bis ${fullDist}, dahinter Fernsicht)` : '');
 }
-const DIST_STEPS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 20, 24, 32, 40, 48, 64, 80, 96, 128, 160, 192, 256, 320, 384, 512, 640, 768, 1024];
+const DIST_STEPS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 16, 20, 24, 32, 40, 48, 64, 80, 96, 128, 160, 192, 256, 320, 384, 512, 640, 768, 1024,
+  2048, 4096, 8192, 16384, 32768, 50000, 65536, 80000, 100000];
 distEl.max = DIST_STEPS.length - 1;
-distEl.value = DIST_STEPS.reduce((best, v, i) => Math.abs(v - renderDist) < Math.abs(DIST_STEPS[best] - renderDist) ? i : best, 0);
+distEl.value = DIST_STEPS.reduce((best, v, i) => Math.abs(v - shownDist) < Math.abs(DIST_STEPS[best] - shownDist) ? i : best, 0);
 showDist();
 distEl.addEventListener('input', () => { applyRenderDist(DIST_STEPS[+distEl.value]); showDist(); });
 // Browser erlauben Ton erst nach einer Eingabe
