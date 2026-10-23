@@ -179,7 +179,7 @@ Alle Geräusche werden live im Browser erzeugt (keine Audiodateien): Abbauen, Se
 
 - **🔭 Sichtweite**: im Menü per Regler von 2 bis **1024 Chunks** (1 Chunk = 16×16 Blöcke, also bis 16 384 Blöcke weit). Bis 12 Chunks (Handy/Tablet: 8) wird die echte Welt geladen, dahinter zeigt eine vereinfachte **Fernsicht** die Landschaft bis zum Horizont (Berge, Seen, Strände, Schnee, Wüsten, Tafelberge) – so wie die Mod „Distant Horizons“. Je weiter weg, desto gröber die Kacheln (4, 16, 64 und 256 Blöcke), so bleibt das Spiel auch bei 1024 Chunks flüssig.
 - **Texturstufen nach Entfernung**: nahe Blöcke mit 128×128 Pixeln, ab 4 Chunks 64×64, ab 12 Chunks 32×32 und ab 24 Chunks 16×16.
-- **🔊 Sound** und **🎵 Musik** getrennt an/aus.
+- **🔊 Sound**, **🎵 Musik** und **☁️ Wolken** getrennt an/aus.
 
 ## Steuerung
 

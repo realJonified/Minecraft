@@ -186,7 +186,7 @@
     <p class="sub">Baue, grabe und erkunde eine unendliche Welt</p>
     <button id="play">Spielen</button>
     <button id="peaceful">Monster: An</button>
-    <div class="row2"><button id="sound">🔊 Sound: An</button><button id="music">🎵 Musik: An</button></div>
+    <div class="row2"><button id="sound">🔊 Sound: An</button><button id="music">🎵 Musik: An</button><button id="clouds">☁️ Wolken: An</button></div>
     <div class="setting"><label for="dist">🔭 Sichtweite: <b id="dist-val"></b></label><input id="dist" type="range" min="0" max="30" step="1"></div>
     <button id="mode">Spielmodus: 🗡️ Überleben</button>
     <button id="newworld">Neue Welt erstellen</button>
@@ -5245,7 +5245,8 @@ const END_SKY = new THREE.Color(0x0b0612);
 const LAVA_FOG = new THREE.Color(0xc8400a);
 
 function applyDimensionLook() {
-  sun.visible = moon.visible = clouds.visible = world.dim === 'overworld';
+  sun.visible = moon.visible = world.dim === 'overworld';
+  clouds.visible = world.dim === 'overworld' && settings.clouds !== false;
 }
 
 // Alles aus der aktuellen Welt wegräumen und in die andere wechseln
@@ -6817,6 +6818,16 @@ function updateSoundBtns() {
 soundBtn.addEventListener('click', () => { soundOn = !soundOn; sfx.setVolumes(); sfx.unlock(); sfx.click(); updateSoundBtns(); });
 musicBtn.addEventListener('click', () => { musicOn = !musicOn; sfx.setVolumes(); sfx.unlock(); updateSoundBtns(); });
 updateSoundBtns();
+// Wolken an/aus (wird im Browser gemerkt)
+const cloudsBtn = document.getElementById('clouds');
+function updateCloudsBtn() { cloudsBtn.textContent = settings.clouds === false ? '☁️ Wolken: Aus' : '☁️ Wolken: An'; }
+cloudsBtn.addEventListener('click', () => {
+  settings.clouds = settings.clouds === false;
+  try { localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings)); } catch { /* egal */ }
+  clouds.visible = world.dim === 'overworld' && settings.clouds !== false;
+  updateCloudsBtn();
+});
+updateCloudsBtn();
 // Sichtweite-Regler
 const distEl = document.getElementById('dist'), distVal = document.getElementById('dist-val');
 function showDist() {
